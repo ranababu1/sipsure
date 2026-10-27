@@ -1,18 +1,19 @@
 package app.sipsure.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -25,129 +26,150 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.sipsure.domain.AdvanceStatus
 import app.sipsure.domain.AdvanceTerms
 import app.sipsure.domain.HydrationController
 import app.sipsure.domain.LedgerEntry
-import app.sipsure.ui.theme.Hero
+import app.sipsure.ui.theme.Ocean
 import kotlin.math.max
 
 @Composable
 fun CreditsScreen(host: AppHost, now: Long) {
     val ledger = host.state.ledger
     var confirmAdvance by remember { mutableStateOf(false) }
+    var showInfo by remember { mutableStateOf(false) }
     val remaining = ledger.advancesRemaining(now)
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Credits", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
-
-        HeroCard(Hero.Calm) {
-            Text("Your balance", style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.85f))
-            Text(ledger.balance.toString(), style = MaterialTheme.typography.displayLarge, color = Color.White)
-            Text(
-                if (ledger.balance == 1) "credit" else "credits",
-                style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.9f),
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                "One credit skips one restriction for an hour.",
-                style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.85f), textAlign = TextAlign.Center,
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Credits", style = MaterialTheme.typography.headlineLarge, color = Ocean.TextHigh, modifier = Modifier.weight(1f))
+            Box(Modifier.clip(RoundedCornerShape(50)).springClick { showInfo = true }) {
+                StatusPill("Test mode", Ocean.Amber)
+            }
         }
 
-        SoftCard(container = MaterialTheme.colorScheme.secondaryContainer) {
-            Row(verticalAlignment = Alignment.Top) {
-                Icon24(Icons.Filled.Info, MaterialTheme.colorScheme.onSecondaryContainer)
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    "Test mode: credits are free and no real money is charged. Real purchases come after billing and store rules are reviewed, " +
-                        "and refund and support details will appear here first.",
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-            }
+        // Balance
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFF1479C4), Color(0xFF0E5A8F), Color(0xFF0A3E63))))
+                .border(1.dp, Ocean.GlassBorder, RoundedCornerShape(32.dp)).padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            CoinGlyph(Color.White.copy(alpha = 0.9f), 34.dp)
+            Spacer(Modifier.height(6.dp))
+            Text(ledger.balance.toString(), style = MaterialTheme.typography.displayLarge.copy(fontSize = 84.sp), color = Color.White)
+            Text(
+                if (ledger.balance == 1) "credit" else "credits",
+                style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.85f),
+            )
+            Spacer(Modifier.height(10.dp))
+            Text("One credit skips one restriction for an hour.", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.75f))
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             HydrationController.CREDIT_PACKS.forEach { pack ->
-                SoftCard(Modifier.weight(1f)) {
-                    Text("+${pack.credits}", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
-                    Text("credits (test)", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(12.dp))
-                    SecondaryButton("Add", { host.act { buyCredits(pack) } }, icon = Icons.Filled.Add)
+                Column(
+                    Modifier.weight(1f).clip(RoundedCornerShape(26.dp)).background(Ocean.Glass)
+                        .border(1.dp, Ocean.GlassBorder, RoundedCornerShape(26.dp))
+                        .springClick { host.act { buyCredits(pack) } }.padding(vertical = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text("+${pack.credits}", style = MaterialTheme.typography.displayMedium, color = Ocean.Aqua)
+                    Text("credits", style = MaterialTheme.typography.bodyMedium, color = Ocean.TextMid)
+                    Spacer(Modifier.height(10.dp))
+                    StatusPill("Add free", Ocean.Aqua)
                 }
             }
         }
 
-        SectionTitle("Emergency advances")
-        SoftCard {
+        SectionLabel("Emergency advance")
+        GlassCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Out of credits?", style = MaterialTheme.typography.titleLarge, color = Ocean.TextHigh)
+                    Text(
+                        "Borrow ${AdvanceTerms.CREDITS_PER_ADVANCE}, repay within 24 hours.",
+                        style = MaterialTheme.typography.bodyMedium, color = Ocean.TextMid,
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    repeat(AdvanceTerms.MAX_OUTSTANDING) { i ->
+                        Box(Modifier.size(12.dp).clip(CircleShape).background(if (i < remaining) Ocean.Aqua else Color.White.copy(alpha = 0.16f)))
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            PillButton("Take an advance", { confirmAdvance = true }, kind = ButtonKind.Glass) { CoinGlyph(it) }
+            Spacer(Modifier.height(10.dp))
             Text(
-                "$remaining of ${AdvanceTerms.MAX_OUTSTANDING} advances available",
-                style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface,
+                "Overdue advances only block new ones. Nothing is deleted and your phone is never locked because of it.",
+                style = MaterialTheme.typography.bodyMedium, color = Ocean.TextLow,
             )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Out of credits? An advance gives you ${AdvanceTerms.CREDITS_PER_ADVANCE} credit now, to be repaid within 24 hours. " +
-                    "If it isn't, it's marked overdue and you can't take more advances until it's repaid. Nothing is deleted and your phone keeps working.",
-                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(14.dp))
-            PrimaryButton("Take an emergency advance", { confirmAdvance = true }, icon = Icons.Filled.Star)
         }
 
         ledger.advances(now).filter { it.status != AdvanceStatus.REPAID }.forEach { advance ->
             val overdue = advance.status == AdvanceStatus.OVERDUE
             val issuedAt = advance.dueAtMs - AdvanceTerms.REPAYMENT_WINDOW_MS
             val elapsed = ((now - issuedAt).toFloat() / AdvanceTerms.REPAYMENT_WINDOW_MS).coerceIn(0f, 1f)
-            SoftCard(container = if (overdue) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surface) {
-                Text(
-                    if (overdue) "Advance overdue" else "Advance outstanding",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (overdue) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    "${advance.credits} credit · due ${formatDateTime(advance.dueAtMs)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (overdue) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(12.dp))
+            val tint = if (overdue) Ocean.Amber else Ocean.Aqua
+            GlassCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(if (overdue) "Advance overdue" else "Advance to repay", style = MaterialTheme.typography.titleMedium, color = Ocean.TextHigh)
+                        Text("Due ${formatDateTime(advance.dueAtMs)}", style = MaterialTheme.typography.bodyMedium, color = Ocean.TextMid)
+                    }
+                    Text("${advance.credits}", style = MaterialTheme.typography.displayMedium.copy(fontSize = 34.sp), color = tint)
+                }
+                Spacer(Modifier.height(14.dp))
                 LinearProgressIndicator(
-                    progress = { elapsed },
-                    modifier = Modifier.fillMaxWidth().height(8.dp),
-                    color = if (overdue) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.outlineVariant,
+                    progress = { elapsed }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                    color = tint, trackColor = Color.White.copy(alpha = 0.12f), gapSize = 0.dp, drawStopIndicator = {},
                 )
                 Spacer(Modifier.height(14.dp))
-                SecondaryButton("Repay with 1 credit", { host.act { repayAdvance(advance.txId) } }, icon = Icons.Filled.Check)
+                PillButton("Repay with 1 credit", { host.act { repayAdvance(advance.txId) } }, kind = ButtonKind.Glass) { CheckGlyph(it) }
             }
         }
 
-        SectionTitle("History")
-        SoftCard {
+        SectionLabel("History")
+        GlassCard(padding = 6.dp) {
             if (ledger.entries.isEmpty()) {
-                Text("No transactions yet.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("No transactions yet.", Modifier.padding(14.dp), style = MaterialTheme.typography.bodyMedium, color = Ocean.TextMid)
             }
-            val entries = ledger.entries.takeLast(10).reversed()
-            entries.forEachIndexed { index, entry ->
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            val entries = ledger.entries.takeLast(8).reversed()
+            entries.forEach { entry ->
+                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(entryLabel(entry), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                        Text(formatDateTime(entry.atMs), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(entryLabel(entry), style = MaterialTheme.typography.titleMedium, color = Ocean.TextHigh)
+                        Text(formatDateTime(entry.atMs), style = MaterialTheme.typography.bodyMedium, color = Ocean.TextLow)
                     }
                     Text(
                         (if (entry.delta > 0) "+" else "") + entry.delta,
                         style = MaterialTheme.typography.titleLarge,
-                        color = if (entry.delta > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (entry.delta > 0) Ocean.Aqua else Ocean.TextMid,
                     )
                 }
-                if (index != entries.lastIndex) Spacer(Modifier.height(14.dp))
             }
         }
-        Spacer(Modifier.height(8.dp))
     }
 
+    if (showInfo) {
+        AlertDialog(
+            onDismissRequest = { showInfo = false },
+            title = { Text("Test mode") },
+            text = {
+                Text(
+                    "Credits are free right now and no real money is charged. Real purchases will come after billing and store rules are reviewed, " +
+                        "and refund and support details will appear here before any real purchase.",
+                )
+            },
+            confirmButton = { TextButton({ showInfo = false }) { Text("Got it") } },
+        )
+    }
     if (confirmAdvance) {
         val due = now + AdvanceTerms.REPAYMENT_WINDOW_MS
         AlertDialog(
@@ -156,7 +178,7 @@ fun CreditsScreen(host: AppHost, now: Long) {
             text = {
                 Text(
                     "You'll receive ${AdvanceTerms.CREDITS_PER_ADVANCE} credit now. Repay it by ${formatDateTime(due)} (24 hours).\n\n" +
-                        "Advances remaining after this one: ${max(remaining - 1, 0)} of ${AdvanceTerms.MAX_OUTSTANDING}.\n\n" +
+                        "Advances left after this one: ${max(remaining - 1, 0)} of ${AdvanceTerms.MAX_OUTSTANDING}.\n\n" +
                         "If you don't repay in time it's marked overdue and you can't take more advances. Nothing is deleted and your phone is never locked because of it.",
                 )
             },
@@ -171,9 +193,4 @@ private fun entryLabel(e: LedgerEntry) = when (e) {
     is LedgerEntry.Redemption -> "Credit used for a bypass"
     is LedgerEntry.Advance -> "Emergency advance"
     is LedgerEntry.Repayment -> "Advance repaid"
-}
-
-@Composable
-private fun Icon24(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color) {
-    androidx.compose.material3.Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
 }

@@ -2,7 +2,7 @@
 
 **Goal:** SipSure, an Android hydration accountability app (see `plan.md`). **Maturity:** MVP feature set implemented with test-mode credits; only partly verified on a device (see below). Not release-ready.
 
-**Platform/stack:** Native Kotlin, single `:app` module, Jetpack Compose + Material 3 UI (light and dark themes), JUnit 4. JDK 21, compileSdk/targetSdk 36, minSdk 26, Gradle wrapper 8.14, AGP 8.13.1. Runtime dependencies: Compose (BOM 2025.06.01), activity-compose, `androidx.core` (FileProvider).
+**Platform/stack:** Native Kotlin, single `:app` module, Jetpack Compose UI with a custom dark ocean theme (animated water glass, glass cards, floating nav; Material 3 only for dialogs, switches and snackbars), JUnit 4. JDK 21, compileSdk/targetSdk 36, minSdk 26, Gradle wrapper 8.14, AGP 8.13.1. Runtime dependencies: Compose (BOM 2025.06.01), activity-compose, `androidx.core` (FileProvider).
 
 ## Architecture
 - `domain/` (pure Kotlin, unit tested): `Schedule` (validation, quiet hours, next due), `PolicyEngine` (plan section 8 state machine), `CreditLedger` (idempotent ledger, advances), `PhotoCheck` (plausibility/replay rules), `HydrationController` (orchestrates the above, persists via `StateStore`).
@@ -41,7 +41,7 @@
 - Payments are test-mode only; no real billing, no server validation, no privacy policy or terms yet.
 - Photo checks are heuristics (size, light, freshness, near-duplicate hash), not proof of drinking.
 - UI strings are inline Kotlin (not yet in resources). Photo flow, phone lock, TalkBack, large fonts and small screens were not re-tested after the Compose redesign.
-- Compose icons are limited to the core set (no camera or drop icons); a drawn teardrop is used for branding. No app launcher icon design yet.
+- Dark theme only. Schedule options are presets (no 15-minute granularity). Icons are hand-drawn Canvas glyphs; launcher icon is a simple adaptive drop.
 - No instrumented/UI tests.
 
 ## Next

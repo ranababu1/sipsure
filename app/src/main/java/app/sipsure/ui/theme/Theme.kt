@@ -1,105 +1,91 @@
 package app.sipsure.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.shape.RoundedCornerShape
 
-private val Ocean = Color(0xFF0A6B94)
-private val Aqua = Color(0xFF12A4C9)
+/** The app is deliberately one immersive dark "ocean" look; every screen sits on the same gradient. */
+object Ocean {
+    val BgTop = Color(0xFF04121C)
+    val BgMid = Color(0xFF082B40)
+    val BgBottom = Color(0xFF0B5A75)
 
-private val Light = lightColorScheme(
-    primary = Ocean,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFD3EEF9),
-    onPrimaryContainer = Color(0xFF00384D),
-    secondary = Color(0xFF3E6577),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFDDEBF2),
-    onSecondaryContainer = Color(0xFF142C38),
-    tertiary = Color(0xFFB4492E),
-    onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFFFDBD1),
-    onTertiaryContainer = Color(0xFF4A1204),
-    background = Color(0xFFF3F9FC),
-    onBackground = Color(0xFF0F1D24),
-    surface = Color(0xFFFFFFFF),
-    onSurface = Color(0xFF0F1D24),
-    surfaceVariant = Color(0xFFE6EFF3),
-    onSurfaceVariant = Color(0xFF475A64),
-    outline = Color(0xFF8499A4),
-    outlineVariant = Color(0xFFCADAE1),
-    error = Color(0xFFB3261E),
-)
+    val Aqua = Color(0xFF4FD1F5)
+    val AquaBright = Color(0xFF2FB8E8)
+    val AquaDeep = Color(0xFF1479C4)
+    val Foam = Color(0xFFD5F6FF)
+    val Amber = Color(0xFFFFB347)
+    val Coral = Color(0xFFFF7B6B)
+    val Mint = Color(0xFF5BE3B0)
 
-private val Dark = darkColorScheme(
-    primary = Color(0xFF58CBF0),
-    onPrimary = Color(0xFF00364A),
-    primaryContainer = Color(0xFF0C4A63),
-    onPrimaryContainer = Color(0xFFCDEEFB),
-    secondary = Color(0xFFA8CBDB),
-    onSecondary = Color(0xFF123340),
-    secondaryContainer = Color(0xFF2A4857),
-    onSecondaryContainer = Color(0xFFDDEBF2),
-    tertiary = Color(0xFFFFB5A0),
-    onTertiary = Color(0xFF5A1D0B),
-    tertiaryContainer = Color(0xFF7B2F18),
-    onTertiaryContainer = Color(0xFFFFDBD1),
-    background = Color(0xFF071820),
-    onBackground = Color(0xFFDCEAF0),
-    surface = Color(0xFF0D2530),
-    onSurface = Color(0xFFDCEAF0),
-    surfaceVariant = Color(0xFF1B3441),
-    onSurfaceVariant = Color(0xFFA9C0CB),
-    outline = Color(0xFF6F8A97),
-    outlineVariant = Color(0xFF2B4857),
+    val TextHigh = Color(0xFFF2FAFD)
+    val TextMid = Color(0xFFB4CFDB)
+    val TextLow = Color(0xFF7FA0B0)
+
+    val Glass = Color.White.copy(alpha = 0.08f)
+    val GlassStrong = Color.White.copy(alpha = 0.14f)
+    val GlassBorder = Color.White.copy(alpha = 0.14f)
+
+    // Water colours per state, deep enough that white numerals stay readable on top.
+    val WaterCalm = Color(0xFF1E9FD8)
+    val WaterDue = Color(0xFFD9822B)
+    val WaterMissed = Color(0xFFCF5547)
+    val WaterBypass = Color(0xFF27AE86)
+    val WaterPaused = Color(0xFF6A8BA5)
+}
+
+private val Scheme = darkColorScheme(
+    primary = Ocean.Aqua,
+    onPrimary = Color(0xFF00232F),
+    primaryContainer = Color(0xFF0E4A63),
+    onPrimaryContainer = Ocean.Foam,
+    secondary = Color(0xFF9CCBDD),
+    onSecondary = Color(0xFF0A2B3A),
+    secondaryContainer = Color(0xFF1B4559),
+    onSecondaryContainer = Ocean.Foam,
+    tertiary = Ocean.Coral,
+    onTertiary = Color(0xFF4A0F06),
+    tertiaryContainer = Color(0xFF6E2A1E),
+    onTertiaryContainer = Color(0xFFFFDAD3),
+    background = Ocean.BgTop,
+    onBackground = Ocean.TextHigh,
+    surface = Color(0xFF0E2D40),
+    onSurface = Ocean.TextHigh,
+    surfaceVariant = Color(0xFF173C52),
+    onSurfaceVariant = Ocean.TextMid,
+    outline = Ocean.TextLow,
+    outlineVariant = Color(0xFF2B4B5E),
     error = Color(0xFFFFB4AB),
 )
 
-/** Status colours for hero cards; white text sits on these in both themes. */
-object Hero {
-    val Calm = listOf(Color(0xFF0A5A86), Color(0xFF0E94B8))
-    val Due = listOf(Color(0xFF8A4306), Color(0xFFBE6309))
-    val Missed = listOf(Color(0xFF8E2A2A), Color(0xFFBD403C))
-    val Bypass = listOf(Color(0xFF17604A), Color(0xFF28896A))
-    val Paused = listOf(Color(0xFF3D4F60), Color(0xFF5A6E84))
-}
-
 private val AppTypography = Typography(
-    displayLarge = TextStyle(fontSize = 56.sp, lineHeight = 60.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1).sp),
-    headlineMedium = TextStyle(fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold),
-    headlineSmall = TextStyle(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold),
+    displayLarge = TextStyle(fontSize = 68.sp, lineHeight = 72.sp, fontWeight = FontWeight.Light, letterSpacing = (-2).sp),
+    displayMedium = TextStyle(fontSize = 44.sp, lineHeight = 48.sp, fontWeight = FontWeight.Light, letterSpacing = (-1).sp),
+    headlineLarge = TextStyle(fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
+    headlineMedium = TextStyle(fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp),
     titleLarge = TextStyle(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold),
     titleMedium = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold),
     bodyLarge = TextStyle(fontSize = 16.sp, lineHeight = 24.sp),
-    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
-    labelLarge = TextStyle(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
-    labelMedium = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.4.sp),
+    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
+    labelLarge = TextStyle(fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    labelMedium = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp),
 )
 
 private val AppShapes = Shapes(
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(18.dp),
-    large = RoundedCornerShape(26.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(28.dp),
 )
 
-val AccentAqua = Aqua
-
 @Composable
-fun SipSureTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) Dark else Light,
-        typography = AppTypography,
-        shapes = AppShapes,
-        content = content,
-    )
+fun SipSureTheme(content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = Scheme, typography = AppTypography, shapes = AppShapes, content = content)
 }

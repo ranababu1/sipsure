@@ -2,6 +2,21 @@
 
 Newest first.
 
+## 2026-10-27 — UI redesign v2 (ocean look, animated water glass)
+
+- Reason: the Compose v1 UI was Material defaults in a blue palette (stacked cards, paragraphs of copy, stock icons) and was rejected as poor. A brief web search for current trends returned mostly low-quality pages; the design leans on the consistent points it did surface (a fill-up water visual, minimal glanceable screens, Material 3 Expressive spring motion and bold type, streak/progress visuals), not on any specific app.
+- One immersive dark ocean gradient across all screens (light mode dropped; system bars always light-icon).
+- Centrepiece `WaterGlass`: layered animated waves, rising bubbles and glass highlight; water level shows time to the next check-in (full after a check-in, draining), with state colours (aqua on track, amber due, coral missed, green bypass, grey paused) and a lock or pause glyph for missed and paused states.
+- Large light numerals, one headline and one line of copy per state; the single next action is a pill button (camera glyph). Glass quick-action tiles (Pause, Credits balance, Override), a "Today" droplet row (counts today's check-ins), compact Recent list.
+- Floating pill navigation with spring press feedback; hand-drawn glyphs (camera, lock, pause, play, coin, SOS, gear, check, phone, drop) replace stock icons.
+- Credits: gradient balance card with a giant number, pack tiles, an advance card with remaining-advance dots and a 24h progress bar; the test-mode explanation moved behind a pill and dialog.
+- Settings and onboarding use preset chips (interval, window, grace, quiet hours) instead of sliders or number boxes; invalid window values are disabled. Onboarding is four short steps: promise, how it works, privacy (plain checklist and consent), schedule.
+- Added adaptive launcher icon (white drop on ocean blue).
+- Debug builds only: `DebugTimeReceiver` can now also wipe saved state (`--ez reset true`) for testing onboarding.
+- Trade-offs: fine-grained intervals (15-minute steps) are replaced by presets; copy that used to be on-screen (consequence text, long privacy paragraph) is shorter, so the full explanations live in onboarding, dialogs and Settings.
+- Verified: build and 57 unit tests pass. On emulator: all four onboarding steps, Today in on-track(bypass), missed and bypass states, Credits, Settings.
+- NOT re-verified after this redesign: camera/photo flow, phone-lock engagement, the due/grace hero, TalkBack, large font scale, small screens, landscape, reduced-motion preferences.
+
 ## 2026-10-27 — UI redesign (Jetpack Compose + Material 3)
 
 - Replaced the programmatic-views UI with Compose. Reason: the first UI was functional but unpolished; a designed UI is a clear product requirement. Added dependencies: Compose BOM 2025.06.01 (ui, foundation, material3, icons-core) and activity-compose 1.10.1. Domain, data and platform layers are unchanged.

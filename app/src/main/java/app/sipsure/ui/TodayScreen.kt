@@ -1,26 +1,23 @@
 package app.sipsure.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,7 +26,10 @@ import app.sipsure.domain.AppState
 import app.sipsure.domain.HistoryEvent
 import app.sipsure.domain.HistoryKind
 import app.sipsure.domain.Phase
-import app.sipsure.ui.theme.Hero
+import app.sipsure.ui.theme.Ocean
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 private const val MS_PER_MINUTE = 60_000L
 
@@ -38,177 +38,172 @@ fun TodayScreen(host: AppHost, now: Long) {
     val state = host.state
     val p = state.policy
     val locked = host.deviceLockActive
+    val missed = p.appRestricted
+    val due = p.phase == Phase.CHECK_IN_DUE || p.phase == Phase.GRACE_PERIOD
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Header(p.phase)
-        when (p.phase) {
-            Phase.CHECK_IN_DUE -> DueHero(state, now, grace = false)
-            Phase.GRACE_PERIOD -> DueHero(state, now, grace = true)
-            Phase.RESTRICTED_IN_APP, Phase.DEVICE_ENFORCEMENT_UNAVAILABLE -> MissedHero(locked)
-            Phase.EMERGENCY_BYPASS -> BypassHero(state, now)
-            Phase.PAUSED -> PausedHero()
-            else -> CalmHero(state, now)
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Greeting(state, now)
 
-        when (p.phase) {
-            Phase.CHECK_IN_DUE, Phase.GRACE_PERIOD ->
-                PrimaryButton("Take check-in photo", host.launchCamera, icon = Icons.Filled.Check)
-            Phase.RESTRICTED_IN_APP, Phase.DEVICE_ENFORCEMENT_UNAVAILABLE -> MissedActions(host, state, locked)
-            Phase.PAUSED -> PrimaryButton("Resume schedule", { host.act { resume() } }, icon = Icons.Filled.PlayArrow)
-            else -> Unit
-        }
-
-        AdvanceNotice(state, now)
-
-        val canPause = p.phase != Phase.PAUSED && !p.appRestricted
-        if (canPause || !locked) {
-            SoftCard {
-                Text("Quick actions", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                Spacer(Modifier.height(12.dp))
-                if (canPause) {
-                    SecondaryButton("Pause schedule", { host.act { pause() } })
-                    Spacer(Modifier.height(10.dp))
-                }
-                if (!locked) {
-                    SecondaryButton(
-                        "Emergency override (free)", { host.act { emergencyOverride() } },
-                        icon = Icons.Filled.Warning, tint = MaterialTheme.colorScheme.tertiary,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Free, always available, and pauses check-ins for an hour.",
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+        val view = glassView(state, now, locked)
+        WaterGlass(view.level, view.water, description = view.description) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (view.glyph != null) {
+                    view.glyph.invoke()
+                } else {
+                    Text(view.value, style = MaterialTheme.typography.displayLarge, color = Color.White)
+                    Text(view.unit, style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.9f))
                 }
             }
         }
 
-        if (state.history.isNotEmpty()) Timeline(state.history.takeLast(5).reversed())
-        Spacer(Modifier.height(8.dp))
-    }
-}
-
-@Composable
-private fun Header(phase: Phase) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        WaterDrop(Modifier.size(width = 18.dp, height = 24.dp), MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(10.dp))
-        Text("SipSure", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
-        Spacer(Modifier.weight(1f))
-        val (label, container) = when (phase) {
-            Phase.CHECK_IN_DUE, Phase.GRACE_PERIOD -> "Check-in open" to MaterialTheme.colorScheme.tertiaryContainer
-            Phase.RESTRICTED_IN_APP, Phase.DEVICE_ENFORCEMENT_UNAVAILABLE -> "Check-in missed" to MaterialTheme.colorScheme.tertiaryContainer
-            Phase.EMERGENCY_BYPASS -> "Bypass" to MaterialTheme.colorScheme.secondaryContainer
-            Phase.PAUSED -> "Paused" to MaterialTheme.colorScheme.secondaryContainer
-            else -> "On track" to MaterialTheme.colorScheme.primaryContainer
-        }
-        StatusPill(label, container = container, content = MaterialTheme.colorScheme.onSurface)
-    }
-}
-
-@Composable
-private fun CalmHero(state: AppState, now: Long) {
-    val due = state.policy.nextDueAtMs
-    val interval = state.schedule.intervalMinutes * MS_PER_MINUTE
-    val remaining = ((due ?: now) - now).coerceAtLeast(0)
-    val (value, unit) = countdownParts(remaining)
-    HeroCard(Hero.Calm) {
-        ProgressRing(
-            progress = 1f - remaining.toFloat() / interval,
-            description = "Next check-in in $value $unit",
-        ) {
-            RingCenter(value, unit, "until your next sip")
-        }
-        Spacer(Modifier.height(20.dp))
-        HeroTitle("You're all set")
-        HeroBody(
-            due?.let { "Next check-in at ${formatClock(it)}. If it's missed there's a ${state.schedule.checkInWindowMinutes}-minute window, " +
-                "then ${state.schedule.graceMinutes} minutes of grace, then the restriction screen." } ?: "",
+        StatusPill(view.status, view.tint)
+        Text(
+            view.headline, style = MaterialTheme.typography.headlineMedium, color = Ocean.TextHigh, textAlign = TextAlign.Center,
         )
+        Text(
+            view.subline, style = MaterialTheme.typography.bodyLarge, color = Ocean.TextMid, textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        // The one thing to do right now.
+        when {
+            due -> PillButton("Check in with a photo", host.launchCamera, kind = ButtonKind.Amber) { CameraGlyph(it) }
+            missed -> {
+                PillButton("Check in with a photo", host.launchCamera) { CameraGlyph(it) }
+                if (locked) PillButton("Emergency call", host.openDialer, kind = ButtonKind.Glass) { PhoneGlyph(it) }
+            }
+            p.phase == Phase.PAUSED -> PillButton("Resume schedule", { host.act { resume() } }) { PlayGlyph(it) }
+        }
+
+        Tiles(host, state, locked, missed)
+        AdvanceNotice(state, now)
+        DropsToday(state, now)
+        Recent(state)
     }
 }
 
-@Composable
-private fun DueHero(state: AppState, now: Long, grace: Boolean) {
+// ---------- Hero content per state ----------
+
+private class GlassView(
+    val level: Float,
+    val water: Color,
+    val value: String = "",
+    val unit: String = "",
+    val glyph: (@Composable () -> Unit)? = null,
+    val status: String,
+    val tint: Color,
+    val headline: String,
+    val subline: String,
+    val description: String,
+)
+
+private fun glassView(state: AppState, now: Long, locked: Boolean): GlassView {
     val p = state.policy
-    val end = (if (grace) p.graceEndsAtMs else p.windowEndsAtMs) ?: now
-    val total = (if (grace) state.schedule.graceMinutes else state.schedule.checkInWindowMinutes) * MS_PER_MINUTE
-    val remaining = (end - now).coerceAtLeast(0)
-    val (value, unit) = countdownParts(remaining)
-    HeroCard(Hero.Due) {
-        ProgressRing(
-            progress = if (total > 0) remaining.toFloat() / total else 0f,
-            description = "$value $unit left to check in",
-        ) {
-            RingCenter(value, unit, if (grace) "of grace left" else "left to check in")
+    val s = state.schedule
+    fun clock(ms: Long?) = ms?.let(::formatClock) ?: "soon"
+    return when (p.phase) {
+        Phase.CHECK_IN_DUE, Phase.GRACE_PERIOD -> {
+            val grace = p.phase == Phase.GRACE_PERIOD
+            val end = (if (grace) p.graceEndsAtMs else p.windowEndsAtMs) ?: now
+            val (value, unit) = countdownParts(end - now)
+            GlassView(
+                level = 0.14f, water = Ocean.WaterDue, value = value, unit = "$unit left",
+                status = if (grace) "Grace period" else "Check-in open", tint = Ocean.Amber,
+                headline = if (grace) "Almost out of time" else "Time for a sip",
+                subline = "Snap a photo of you drinking water by ${clock(end)}.",
+                description = "$value $unit left to check in",
+            )
         }
-        Spacer(Modifier.height(20.dp))
-        HeroTitle(if (grace) "Grace period" else "Time for a sip")
-        HeroBody(
-            if (grace) "The window has closed. Check in by ${formatClock(end)} to avoid the restriction screen."
-            else "Take a quick photo of you drinking water. The window is open until ${formatClock(end)}.",
+        Phase.RESTRICTED_IN_APP, Phase.DEVICE_ENFORCEMENT_UNAVAILABLE -> GlassView(
+            level = 0.14f, water = Ocean.WaterMissed, glyph = { LockGlyph(Color.White, 64.dp) },
+            status = "Check-in missed", tint = Ocean.Coral,
+            headline = "No worries, it happens",
+            subline = if (locked) "Your phone is locked to SipSure. Check in, use a credit or the free override. Calls still work."
+            else "Check in, use a credit, or use the free emergency override.",
+            description = "Check-in missed",
         )
-    }
-}
-
-@Composable
-private fun MissedHero(locked: Boolean) {
-    HeroCard(Hero.Missed) {
-        Icon(Icons.Filled.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
-        Spacer(Modifier.height(16.dp))
-        HeroTitle("Check-in missed")
-        HeroBody(
-            "That's okay, it happens. SipSure stays on this screen until you check in, use a credit or use the emergency override." +
-                if (locked) " Your phone is locked to SipSure until then; emergency calls and incoming calls still work."
-                else " Your phone is not locked.",
-        )
-    }
-}
-
-@Composable
-private fun BypassHero(state: AppState, now: Long) {
-    val until = state.policy.bypassUntilMs ?: now
-    val remaining = (until - now).coerceAtLeast(0)
-    val (value, unit) = countdownParts(remaining)
-    HeroCard(Hero.Bypass) {
-        ProgressRing(
-            progress = remaining.toFloat() / (60 * MS_PER_MINUTE),
-            description = "Bypass active for $value $unit",
-        ) {
-            RingCenter(value, unit, "of bypass left")
+        Phase.EMERGENCY_BYPASS -> {
+            val until = p.bypassUntilMs ?: now
+            val (value, unit) = countdownParts(until - now)
+            GlassView(
+                level = ((until - now).toFloat() / (60 * MS_PER_MINUTE)).coerceIn(0.1f, 0.86f), water = Ocean.WaterBypass,
+                value = value, unit = "$unit of bypass", status = "Bypass active", tint = Ocean.Mint,
+                headline = "You're covered", subline = "Next check-in at ${clock(p.nextDueAtMs)}.",
+                description = "Bypass active for $value $unit",
+            )
         }
-        Spacer(Modifier.height(20.dp))
-        HeroTitle("Bypass active")
-        HeroBody("No check-ins are needed until ${formatClock(until)}. Your next check-in is at ${state.policy.nextDueAtMs?.let(::formatClock) ?: "soon"}.")
+        Phase.PAUSED -> GlassView(
+            level = 0.5f, water = Ocean.WaterPaused, glyph = { PauseGlyph(Color.White, 64.dp) },
+            status = "Paused", tint = Ocean.TextMid,
+            headline = "Schedule paused", subline = "No reminders or restrictions until you resume.",
+            description = "Schedule paused",
+        )
+        else -> {
+            val remaining = ((p.nextDueAtMs ?: now) - now).coerceAtLeast(0)
+            val interval = s.intervalMinutes * MS_PER_MINUTE
+            val (value, unit) = countdownParts(remaining)
+            GlassView(
+                level = (remaining.toFloat() / interval).coerceIn(0.12f, 0.86f), water = Ocean.WaterCalm,
+                value = value, unit = "$unit to next sip", status = "On track", tint = Ocean.Aqua,
+                headline = "You're all set", subline = "Next check-in at ${clock(p.nextDueAtMs)}.",
+                description = "Next check-in in $value $unit",
+            )
+        }
+    }
+}
+
+// ---------- Sections ----------
+
+@Composable
+private fun Greeting(state: AppState, now: Long) {
+    val hour = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).hour
+    val greeting = when (hour) {
+        in 5..11 -> "Good morning"
+        in 12..17 -> "Good afternoon"
+        else -> "Good evening"
+    }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        DropGlyph(Ocean.Aqua, 26.dp)
+        Spacer(Modifier.width(10.dp))
+        Column {
+            Text(greeting, style = MaterialTheme.typography.bodyMedium, color = Ocean.TextMid)
+            Text("SipSure", style = MaterialTheme.typography.titleLarge, color = Ocean.TextHigh)
+        }
     }
 }
 
 @Composable
-private fun PausedHero() {
-    HeroCard(Hero.Paused) {
-        WaterDrop(Modifier.size(width = 40.dp, height = 52.dp), Color.White.copy(alpha = 0.85f))
-        Spacer(Modifier.height(16.dp))
-        HeroTitle("Schedule paused")
-        HeroBody("No reminders or restrictions while paused. Resume whenever you're ready.")
+private fun Tiles(host: AppHost, state: AppState, locked: Boolean, missed: Boolean) {
+    val paused = state.policy.phase == Phase.PAUSED
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (!paused && !missed) {
+            ActionTile("Pause", { host.act { pause() } }, Modifier.weight(1f), accent = Ocean.TextMid, detail = "Take a break") { PauseGlyph(it) }
+        }
+        ActionTile(
+            "Credits", { host.goToCredits() }, Modifier.weight(1f), accent = Ocean.Aqua,
+            detail = "${state.ledger.balance} left",
+        ) { CoinGlyph(it) }
+        if (!locked) {
+            ActionTile("Override", { host.act { emergencyOverride() } }, Modifier.weight(1f), accent = Ocean.Coral, detail = "Always free") { SosGlyph(it) }
+        }
     }
-}
-
-@Composable
-private fun MissedActions(host: AppHost, state: AppState, locked: Boolean) {
-    val balance = state.ledger.balance
-    PrimaryButton("Take check-in photo", host.launchCamera, icon = Icons.Filled.Check)
+    if (missed && !locked) {
+        val balance = state.ledger.balance
+        PillButton(
+            if (balance > 0) "Use 1 credit to bypass" else "Out of credits? See emergency advance",
+            { if (balance > 0) host.act { redeemBypassWithCredit() } else host.goToCredits() },
+            kind = ButtonKind.Glass,
+        ) { CoinGlyph(it) }
+    }
     if (locked) {
-        SecondaryButton("Emergency call", host.openDialer, icon = Icons.Filled.Call)
-        SecondaryButton(
-            "Emergency override (free)", { host.act { emergencyOverride() } },
-            icon = Icons.Filled.Warning, tint = MaterialTheme.colorScheme.tertiary,
-        )
+        val balance = state.ledger.balance
+        PillButton(
+            if (balance > 0) "Use 1 credit to bypass" else "Out of credits? See emergency advance",
+            { if (balance > 0) host.act { redeemBypassWithCredit() } else host.goToCredits() },
+            kind = ButtonKind.Glass,
+        ) { CoinGlyph(it) }
+        PillButton("Emergency override (free)", { host.act { emergencyOverride() } }, kind = ButtonKind.Danger) { SosGlyph(it) }
     }
-    SecondaryButton(
-        if (balance > 0) "Use 1 credit to bypass ($balance left)" else "No credits — see emergency advance",
-        { if (balance > 0) host.act { redeemBypassWithCredit() } else host.goToCredits() },
-        icon = Icons.Filled.Star,
-    )
 }
 
 @Composable
@@ -216,45 +211,84 @@ private fun AdvanceNotice(state: AppState, now: Long) {
     val open = state.ledger.advances(now).filter { it.status != AdvanceStatus.REPAID }
     if (open.isEmpty()) return
     val overdue = open.any { it.status == AdvanceStatus.OVERDUE }
-    SoftCard(container = if (overdue) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer) {
-        Text(
-            if (overdue) "An advance is overdue" else "${open.size} of 3 advances outstanding",
-            style = MaterialTheme.typography.titleMedium,
-            color = if (overdue) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            if (overdue) "Repay it in the Credits tab to take new advances. Nothing else is affected."
-            else "Repayment due by ${formatDateTime(open.minOf { it.dueAtMs })}.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (overdue) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
-        )
-    }
-}
-
-@Composable
-private fun Timeline(events: List<HistoryEvent>) {
-    SectionTitle("Recent activity")
-    SoftCard {
-        events.forEachIndexed { index, event ->
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconBadge(iconFor(event.kind), MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer, Modifier.size(36.dp))
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(labelFor(event.kind), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                    Text(formatDateTime(event.atMs), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+    val tint = if (overdue) Ocean.Amber else Ocean.Aqua
+    GlassCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(10.dp).clip(CircleShape).background(tint))
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(
+                    if (overdue) "An advance is overdue" else "${open.size} advance${if (open.size > 1) "s" else ""} to repay",
+                    style = MaterialTheme.typography.titleMedium, color = Ocean.TextHigh,
+                )
+                Text(
+                    if (overdue) "Repay it in Credits to take new ones."
+                    else "Due ${formatDateTime(open.minOf { it.dueAtMs })}",
+                    style = MaterialTheme.typography.bodyMedium, color = Ocean.TextMid,
+                )
             }
-            if (index != events.lastIndex) Spacer(Modifier.height(14.dp))
         }
     }
 }
 
-private fun iconFor(kind: HistoryKind) = when (kind) {
-    HistoryKind.CHECK_IN, HistoryKind.CHECK_IN_CONFIRMED_BY_USER, HistoryKind.ADVANCE_REPAID -> Icons.Filled.Check
-    HistoryKind.BYPASS_EMERGENCY -> Icons.Filled.Warning
-    HistoryKind.PAUSED, HistoryKind.RESUMED -> Icons.Filled.PlayArrow
-    else -> Icons.Filled.Star
+/** A row of droplets, one per recorded check-in today. */
+@Composable
+private fun DropsToday(state: AppState, now: Long) {
+    val zone = ZoneId.systemDefault()
+    val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    val count = state.history.count {
+        (it.kind == HistoryKind.CHECK_IN || it.kind == HistoryKind.CHECK_IN_CONFIRMED_BY_USER) &&
+            Instant.ofEpochMilli(it.atMs).atZone(zone).toLocalDate() == today
+    }
+    GlassCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Today", style = MaterialTheme.typography.labelMedium, color = Ocean.TextLow)
+                Text(
+                    if (count == 0) "No check-ins yet" else "$count check-in${if (count > 1) "s" else ""}",
+                    style = MaterialTheme.typography.titleLarge, color = Ocean.TextHigh,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                repeat(minOf(maxOf(count, 4), 6)) { index ->
+                    DropGlyph(if (index < count) Ocean.Aqua else Color.White.copy(alpha = 0.16f), 22.dp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Recent(state: AppState) {
+    val events = state.history.takeLast(4).reversed()
+    if (events.isEmpty()) return
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionLabel("Recent")
+        GlassCard(padding = 6.dp) {
+            events.forEachIndexed { index, event ->
+                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(34.dp).clip(CircleShape).background(Ocean.GlassStrong), contentAlignment = Alignment.Center) {
+                        glyphFor(event.kind)
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(labelFor(event.kind), style = MaterialTheme.typography.titleMedium, color = Ocean.TextHigh)
+                        Text(formatDateTime(event.atMs), style = MaterialTheme.typography.bodyMedium, color = Ocean.TextLow)
+                    }
+                }
+                if (index != events.lastIndex) Spacer(Modifier.height(2.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun glyphFor(kind: HistoryKind) = when (kind) {
+    HistoryKind.CHECK_IN, HistoryKind.CHECK_IN_CONFIRMED_BY_USER, HistoryKind.ADVANCE_REPAID -> CheckGlyph(Ocean.Aqua, 18.dp)
+    HistoryKind.BYPASS_EMERGENCY -> SosGlyph(Ocean.Coral, 18.dp)
+    HistoryKind.PAUSED -> PauseGlyph(Ocean.TextMid, 18.dp)
+    HistoryKind.RESUMED -> PlayGlyph(Ocean.TextMid, 18.dp)
+    else -> CoinGlyph(Ocean.Aqua, 18.dp)
 }
 
 fun labelFor(kind: HistoryKind) = when (kind) {
@@ -267,26 +301,4 @@ fun labelFor(kind: HistoryKind) = when (kind) {
     HistoryKind.CREDITS_BOUGHT -> "Test credits added"
     HistoryKind.ADVANCE_TAKEN -> "Emergency advance taken"
     HistoryKind.ADVANCE_REPAID -> "Advance repaid"
-}
-
-@Composable
-private fun RingCenter(value: String, unit: String, caption: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.displayLarge, color = Color.White)
-        Text(unit, style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.9f))
-        Spacer(Modifier.height(4.dp))
-        Text(caption, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.8f))
-    }
-}
-
-@Composable
-private fun HeroTitle(text: String) {
-    Text(text, style = MaterialTheme.typography.headlineMedium, color = Color.White, textAlign = TextAlign.Center)
-}
-
-@Composable
-private fun HeroBody(text: String) {
-    if (text.isEmpty()) return
-    Spacer(Modifier.height(8.dp))
-    Text(text, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.92f), textAlign = TextAlign.Center)
 }

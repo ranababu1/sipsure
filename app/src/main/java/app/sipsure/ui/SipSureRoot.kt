@@ -1,23 +1,17 @@
 package app.sipsure.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -30,18 +24,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import app.sipsure.domain.Phase
+import app.sipsure.ui.theme.Ocean
 import app.sipsure.ui.theme.SipSureTheme
 import kotlinx.coroutines.delay
 
-private enum class Tab(val label: String, val icon: ImageVector) {
-    TODAY("Today", Icons.Filled.Home),
-    CREDITS("Credits", Icons.Filled.Star),
-    SETTINGS("Settings", Icons.Filled.Settings),
-}
+private val tabs = listOf(
+    NavItem("Today") { DropGlyph(it, 22.dp) },
+    NavItem("Credits") { CoinGlyph(it, 22.dp) },
+    NavItem("Settings") { GearGlyph(it, 22.dp) },
+)
 
 @Composable
 fun SipSureRoot(host: AppHost, onTick: () -> Unit) {
@@ -65,41 +60,39 @@ fun SipSureRoot(host: AppHost, onTick: () -> Unit) {
         }
 
         val phase = host.state.policy.phase
-        var tab by rememberSaveable { mutableStateOf(Tab.TODAY) }
-        host.onGoToCredits = { tab = Tab.CREDITS }
+        var tab by rememberSaveable { mutableStateOf(0) }
+        host.onGoToCredits = { tab = 1 }
         // A due phone lock always takes over the screen.
-        if (host.deviceLockActive && tab != Tab.TODAY) tab = Tab.TODAY
+        if (host.deviceLockActive && tab != 0) tab = 0
 
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-            snackbarHost = { SnackbarHost(snackbar) },
-            bottomBar = {
-                if (phase != Phase.SETUP_REQUIRED && phase != Phase.RECOVERY_REQUIRED && !host.deviceLockActive) {
-                    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                        Tab.entries.forEach { t ->
-                            NavigationBarItem(
-                                selected = tab == t,
-                                onClick = { tab = t },
-                                icon = { Icon(t.icon, contentDescription = null) },
-                                label = { Text(t.label) },
-                                colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer),
-                            )
+        val showNav = phase != Phase.SETUP_REQUIRED && phase != Phase.RECOVERY_REQUIRED && !host.deviceLockActive
+
+        OceanBackground {
+            Box(Modifier.fillMaxSize().statusBarsPadding()) {
+                when (phase) {
+                    Phase.SETUP_REQUIRED -> OnboardingScreen(host, Modifier.navigationBarsPadding())
+                    Phase.RECOVERY_REQUIRED -> Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp)) { Recovery(host) }
+                    else -> Column(
+                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 12.dp),
+                    ) {
+                        when (tab) {
+                            0 -> TodayScreen(host, now)
+                            1 -> CreditsScreen(host, now)
+                            else -> SettingsScreen(host)
                         }
+                        // Room so the last item can scroll above the floating nav.
+                        Spacer(Modifier.height(if (showNav) 120.dp else 32.dp))
                     }
                 }
-            },
-        ) { padding ->
-            val modifier = Modifier.fillMaxSize().padding(padding)
-            when (phase) {
-                Phase.SETUP_REQUIRED -> OnboardingScreen(host, modifier)
-                Phase.RECOVERY_REQUIRED -> Column(modifier.verticalScroll(rememberScrollState()).padding(20.dp)) { Recovery(host) }
-                else -> Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
-                    when (tab) {
-                        Tab.TODAY -> TodayScreen(host, now)
-                        Tab.CREDITS -> CreditsScreen(host, now)
-                        Tab.SETTINGS -> SettingsScreen(host)
-                    }
+            }
+
+            if (showNav) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                    FloatingNav(tabs, tab, { tab = it })
                 }
+            }
+            Box(Modifier.fillMaxSize().navigationBarsPadding().padding(bottom = if (showNav) 84.dp else 8.dp), contentAlignment = Alignment.BottomCenter) {
+                SnackbarHost(snackbar)
             }
         }
 
@@ -109,18 +102,18 @@ fun SipSureRoot(host: AppHost, onTick: () -> Unit) {
 
 @Composable
 private fun Recovery(host: AppHost) {
-    Spacer(Modifier.height(24.dp))
-    Text("Let's get you set up again", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+    Spacer(Modifier.height(32.dp))
+    Text("Let's get you set up again", style = androidx.compose.material3.MaterialTheme.typography.headlineLarge, color = Ocean.TextHigh)
     Spacer(Modifier.height(16.dp))
-    SoftCard(container = MaterialTheme.colorScheme.secondaryContainer) {
+    GlassCard {
         Text(
             "SipSure couldn't read its saved data, so it paused everything. Nothing is restricted and your phone works normally. " +
                 "Resetting clears the saved schedule, credits and history on this phone and starts setup again.",
-            style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSecondaryContainer,
+            style = androidx.compose.material3.MaterialTheme.typography.bodyLarge, color = Ocean.TextMid,
         )
     }
     Spacer(Modifier.height(16.dp))
-    PrimaryButton("Reset and start setup", { host.act { recoverFromCorruption() } })
+    PillButton("Reset and start setup", { host.act { recoverFromCorruption() } })
 }
 
 @Composable
@@ -131,7 +124,7 @@ private fun PhotoOutcomeDialog(outcome: PhotoOutcome, host: AppHost) {
             onDismissRequest = dismiss,
             title = { Text("Check-in recorded") },
             text = { Text(outcome.message) },
-            confirmButton = { TextButton(dismiss) { Text("OK") } },
+            confirmButton = { TextButton(dismiss) { Text("Nice") } },
         )
         is PhotoOutcome.Retry -> AlertDialog(
             onDismissRequest = dismiss,
