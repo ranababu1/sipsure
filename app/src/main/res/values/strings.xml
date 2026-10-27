@@ -6,7 +6,7 @@
     <string name="notif_due_title">Time for a sip</string>
     <string name="notif_due_text">Your check-in window is open. Tap to take a quick photo.</string>
     <string name="notif_grace_title">Grace period</string>
-    <string name="notif_grace_text">Check in soon to skip the in-app accountability screen. You can also pause or use a bypass.</string>
+    <string name="notif_grace_text">Check in soon to skip the restriction screen. You can also pause or use a credit.</string>
     <string name="notif_restricted_title">Check-in missed</string>
-    <string name="notif_restricted_text">SipSure is showing its in-app screen. Your phone works normally. Open SipSure to check in, bypass or pause.</string>
+    <string name="notif_restricted_text">Open SipSure to check in or use a credit to carry on.</string>
 </resources>

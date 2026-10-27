@@ -2,6 +2,17 @@
 
 Newest first.
 
+## 2026-10-28 — Credit-only unlock, no free override, uninstall block, more water
+
+- Product change directed by the user (recorded in `plan.md` Amendment 2026-10-28): the free emergency override is removed everywhere (controller, UI, copy, notifications); once the phone is locked only a credit unlocks it (a photo check-in, review confirmation, pause and settings changes are all refused while locked); the camera is no longer allowlisted in lock-task mode, only the dialer.
+- While any advance is unpaid (including overdue), `DeviceLock.setUninstallBlocked(true)` blocks uninstalling (device-owner only); it is released when the advance is repaid. Removing the phone-lock setup is also refused while an advance is unpaid or the phone is locked.
+- Kept: emergency and incoming calls always work, overdue never deletes data, phone lock is opt-in with consent. Old saved history entries of the removed override still load (`BYPASS_EMERGENCY` kept in the enum, labelled "no longer offered").
+- UI: locked screen shows only Emergency call and "Unlock with 1 credit" / "Borrow 1 credit to unlock"; the Override tile is gone; consent dialogs and onboarding state the new rules.
+- More water (`ui/Water.kt`): the full-screen background has rising bubbles, rolling wave layers and shimmering light; the glass has three wave layers with sloshing and tilt, falling drips that ripple the surface, dappled light, more bubbles, depth shading, and tap-to-splash with haptics.
+- Verified: build and unit tests pass (new tests for credit-only unlock, locked refusals, uninstall block/release, removal refusal). On emulator: locked screen, borrowing a credit unlocks, `packageUninstallBlocked` goes true while the loan is unpaid and false after repaying (read from `dumpsys device_policy`), water animation visible.
+- Caveat: `pm uninstall` fails with DELETE_FAILED_DEVICE_POLICY_MANAGER for any device-owner app, loan or not, so that command can't distinguish the two; the policy value is the real check. After repaying, the owner must still use "Remove phone-lock setup" before the app can be uninstalled.
+- Risk (flagged): with no free override, a phone locked while the user has no credits and cannot take an advance (3 outstanding, or an overdue one) has no way out except emergency calls or adb. Tracked in `currentstate.md`.
+
 ## 2026-10-27 — Locked-state fixes
 
 - Found by running the lock on the emulator: the floating nav stayed visible while locked because state changes made by the clock/alarm receivers did not refresh the root screen. `AppHost.syncFromController()` now refreshes the UI whenever controller state changes behind its back.

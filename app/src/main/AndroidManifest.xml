@@ -9,9 +9,8 @@
     <!-- Photos are taken by the system camera app, so SipSure itself needs no CAMERA permission. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
-    <!-- Lets the app find the camera and dialer packages to allow during the optional phone lock. -->
+    <!-- Lets the app find the dialer package to allow during the optional phone lock. -->
     <queries>
-        <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
         <intent><action android:name="android.intent.action.DIAL" /></intent>
     </queries>
 

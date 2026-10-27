@@ -109,7 +109,7 @@ fun CreditsScreen(host: AppHost, now: Long, onBack: () -> Unit = {}) {
             PillButton("Take an advance", { confirmAdvance = true }, kind = ButtonKind.Glass) { CoinGlyph(it) }
             Spacer(Modifier.height(10.dp))
             Text(
-                "Overdue advances only block new ones. Nothing is deleted and your phone is never locked because of it.",
+                "An unpaid advance blocks new ones and stops SipSure being uninstalled until it is repaid. Nothing is deleted.",
                 style = MaterialTheme.typography.bodyMedium, color = Ocean.TextLow,
             )
         }
@@ -181,7 +181,7 @@ fun CreditsScreen(host: AppHost, now: Long, onBack: () -> Unit = {}) {
                 Text(
                     "You'll receive ${AdvanceTerms.CREDITS_PER_ADVANCE} credit now. Repay it by ${formatDateTime(due)} (24 hours).\n\n" +
                         "Advances left after this one: ${max(remaining - 1, 0)} of ${AdvanceTerms.MAX_OUTSTANDING}.\n\n" +
-                        "If you don't repay in time it's marked overdue and you can't take more advances. Nothing is deleted and your phone is never locked because of it.",
+                        "If you don't repay in time it's marked overdue and you can't take more advances. Until it is repaid, SipSure can't be uninstalled. Nothing is deleted.",
                 )
             },
             confirmButton = { TextButton({ confirmAdvance = false; host.act { takeAdvance() } }) { Text("Accept advance") } },

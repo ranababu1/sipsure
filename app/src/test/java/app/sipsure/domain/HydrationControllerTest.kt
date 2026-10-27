@@ -92,14 +92,16 @@ class HydrationControllerTest {
     }
 
     @Test
-    fun bypassWithoutCreditsIsRejectedAndEmergencyOverrideStillWorks() {
+    fun bypassNeedsACreditAndBorrowingOneWorks() {
         val c = ready()
         c.restrict()
         assertNotNull(c.redeemBypassWithCredit())
         assertEquals(Phase.RESTRICTED_IN_APP, c.phase())
-        assertNull(c.emergencyOverride())
+        assertNull(c.takeAdvance())
+        assertNull(c.redeemBypassWithCredit())
         assertEquals(Phase.EMERGENCY_BYPASS, c.phase())
         assertEquals(0, c.state.ledger.balance)
+        assertTrue(c.hasUnpaidAdvance())
     }
 
     @Test
@@ -112,10 +114,11 @@ class HydrationControllerTest {
         c.tick()
         assertTrue(c.state.ledger.hasOverdueAdvance(now))
         assertNotNull(c.takeAdvance())
-        // Still able to pause and override: overdue never traps the user.
-        assertNull(c.emergencyOverride().let { c.pause() })
+        // An overdue advance never deletes anything and never blocks pausing the (app-level) restriction.
+        assertNull(c.pause())
         assertEquals(Phase.PAUSED, c.phase())
         assertEquals(1, c.state.ledger.entries.count { it is LedgerEntry.Advance })
+        assertTrue(c.hasUnpaidAdvance())
     }
 
     @Test
@@ -176,38 +179,78 @@ class HydrationControllerTest {
     }
 
     @Test
-    fun phoneLockEngagesOnlyWhenRestrictedAndLiftsOnEveryExit() {
+    fun photoCheckInStillPreventsTheLockBeforeItEngages() {
         val c = lockController { true }
-        assertNull(c.setDeviceLock(true))
-        assertEquals(false, c.deviceLockActive)
-        c.restrict()
-        assertTrue(c.deviceLockActive)
-
-        // Photo check-in, credit, emergency override and pause (before lock) each release it.
-        assertNull(c.confirmReviewedCheckIn(1))
-        assertEquals(false, c.deviceLockActive)
-
-        c.restrict()
-        assertNull(c.emergencyOverride())
-        assertEquals(false, c.deviceLockActive)
-
-        c.buyCredits(CreditPack(1, "1"))
-        now = c.state.policy.nextDueAtMs!! + 20 * min
+        c.setDeviceLock(true)
+        now = c.state.policy.nextDueAtMs!!
         c.tick()
+        assertEquals(Phase.CHECK_IN_DUE, c.phase())
+        assertEquals(false, c.deviceLockActive)
+        assertNull(c.submitCheckIn(good, 1))
+        assertEquals(Phase.ACTIVE, c.phase())
+    }
+
+    @Test
+    fun onceLockedOnlyACreditUnlocks() {
+        val c = lockController { true }
+        c.setDeviceLock(true)
+        c.restrict()
         assertTrue(c.deviceLockActive)
+
+        // No photo, no pause, no settings change, and no free override (it no longer exists).
+        assertEquals(HydrationController.LOCKED_MESSAGE, c.submitCheckIn(good, 1))
+        assertEquals(HydrationController.LOCKED_MESSAGE, c.confirmReviewedCheckIn(1))
+        assertEquals(HydrationController.LOCKED_MESSAGE, c.pause())
+        assertEquals(HydrationController.LOCKED_MESSAGE, c.setDeviceLock(false))
+        assertEquals(Phase.RESTRICTED_IN_APP, c.phase())
+        assertTrue(c.deviceLockActive)
+
+        // Without credits the only way out is to borrow one, then spend it.
+        assertNotNull(c.redeemBypassWithCredit())
+        assertNull(c.takeAdvance())
         assertNull(c.redeemBypassWithCredit())
         assertEquals(false, c.deviceLockActive)
     }
 
     @Test
-    fun phoneLockSettingCannotBeChangedWhileLockedAndNeverBlocksOverride() {
+    fun boughtCreditAlsoUnlocksWithoutAnyAdvance() {
+        val c = lockController { true }
+        c.setDeviceLock(true)
+        c.buyCredits(CreditPack(1, "1"))
+        c.restrict()
+        assertTrue(c.deviceLockActive)
+        assertNull(c.redeemBypassWithCredit())
+        assertEquals(false, c.deviceLockActive)
+        assertEquals(false, c.hasUnpaidAdvance())
+    }
+
+    @Test
+    fun uninstallAndRemovalAreBlockedUntilTheLoanIsRepaid() {
+        val c = lockController { true }
+        assertEquals(false, c.hasUnpaidAdvance())
+        assertNull(c.removeLockSetupBlocker())
+
+        assertNull(c.takeAdvance())
+        assertTrue(c.hasUnpaidAdvance())
+        assertNotNull(c.removeLockSetupBlocker())
+
+        // Still blocked once the advance is overdue.
+        now += 25 * 60 * min
+        assertTrue(c.hasUnpaidAdvance())
+        assertNotNull(c.removeLockSetupBlocker())
+
+        val id = c.state.ledger.entries.first { it is LedgerEntry.Advance }.txId
+        assertNull(c.repayAdvance(id))
+        assertEquals(false, c.hasUnpaidAdvance())
+        assertNull(c.removeLockSetupBlocker())
+    }
+
+    @Test
+    fun removalIsRefusedWhileLocked() {
         val c = lockController { true }
         c.setDeviceLock(true)
         c.restrict()
-        assertNotNull(c.setDeviceLock(false))
-        assertTrue(c.state.deviceLockEnabled)
-        assertNull(c.emergencyOverride())
-        assertNull(c.setDeviceLock(false))
+        assertEquals(HydrationController.LOCKED_MESSAGE, c.removeLockSetupBlocker())
     }
 
     @Test

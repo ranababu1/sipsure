@@ -47,7 +47,7 @@ sealed interface PolicyEvent {
     data class Tick(val nowMs: Long) : PolicyEvent
     /** Photo check-in accepted (or approved on review); starts the next interval. */
     data class CheckInAccepted(val nextDueAtMs: Long) : PolicyEvent
-    /** Credit redeemed, advance taken, or the always-free safety override. Charging is the caller's job. */
+    /** A credit was redeemed (charging happens in the ledger, not here). */
     data class BypassStarted(val untilMs: Long, val nextDueAtMs: Long) : PolicyEvent
     data object PauseRequested : PolicyEvent
     data class Resumed(val nextDueAtMs: Long) : PolicyEvent

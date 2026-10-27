@@ -35,6 +35,11 @@
 - Verified on the emulator for lock, camera, photo and credit unlock, dialer access; see changelog for what is not verified.
 - Debug builds include `DebugTimeReceiver` (clock jumps for testing): `adb shell am broadcast -n app.sipsure/app.sipsure.debug.DebugTimeReceiver --ei minutes 30`.
 
+## Rules since 2026-10-28 (see plan.md amendment)
+- No free emergency override exists. When the phone lock is active, only a credit unlocks it (bought or borrowed); photo, pause and settings are refused. Emergency calls always work.
+- While an advance is unpaid, uninstall is blocked (device owner only); repay, then use Settings > "Remove phone-lock setup" to be able to uninstall.
+- Open risk: a locked user with no credits, three outstanding advances or an overdue one has no in-app way out. Needs a product decision (for example allow repayment-free relief after a long delay, or cap lock duration) before any public release.
+
 ## Known limitations / risks
 - Phone lock has only been tested on one emulator; real phones, OEM skins and reboot-while-locked are untested. Without device owner the app falls back to the in-app screen.
 - Alarms are inexact; reminders can be late on some devices. Opening the app re-evaluates time.

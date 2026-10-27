@@ -68,10 +68,9 @@ fun TodayScreen(host: AppHost, now: Long) {
         // The one thing to do right now.
         when {
             due -> PillButton("Check in with a photo", host.launchCamera, kind = ButtonKind.Amber) { CameraGlyph(it) }
-            missed -> {
-                PillButton("Check in with a photo", host.launchCamera) { CameraGlyph(it) }
-                if (locked) PillButton("Emergency call", host.openDialer, kind = ButtonKind.Glass) { PhoneGlyph(it) }
-            }
+            // Once the phone is locked only a credit unlocks it; a photo no longer does.
+            locked -> PillButton("Emergency call", host.openDialer, kind = ButtonKind.Glass) { PhoneGlyph(it) }
+            missed -> PillButton("Check in with a photo", host.launchCamera) { CameraGlyph(it) }
             p.phase == Phase.PAUSED -> PillButton("Resume schedule", { host.act { resume() } }) { PlayGlyph(it) }
         }
 
@@ -120,9 +119,9 @@ private fun glassView(state: AppState, now: Long, locked: Boolean): GlassView {
         Phase.RESTRICTED_IN_APP, Phase.DEVICE_ENFORCEMENT_UNAVAILABLE -> GlassView(
             level = 0.14f, water = Ocean.WaterMissed, glyph = { LockGlyph(Color.White, 64.dp) },
             status = "Check-in missed", tint = Ocean.Coral,
-            headline = "No worries, it happens",
-            subline = if (locked) "Your phone is locked to SipSure. Check in, use a credit or the free override. Calls still work."
-            else "Check in, use a credit, or use the free emergency override.",
+            headline = if (locked) "Your phone is locked" else "No worries, it happens",
+            subline = if (locked) "Only a credit unlocks it. Emergency calls still work."
+            else "Check in with a photo, or use a credit to carry on.",
             description = "Check-in missed",
         )
         Phase.EMERGENCY_BYPASS -> {
@@ -181,11 +180,10 @@ private fun Tiles(host: AppHost, state: AppState, locked: Boolean, missed: Boole
         // A missed check-in is a focused screen: only the ways out.
         val balance = state.ledger.balance
         PillButton(
-            if (balance > 0) "Use 1 credit to bypass" else "Out of credits? See emergency advance",
+            if (balance > 0) "Unlock with 1 credit" else "Borrow 1 credit to unlock",
             { if (balance > 0) host.act { redeemBypassWithCredit() } else host.goToCredits() },
-            kind = ButtonKind.Glass,
+            kind = if (locked) ButtonKind.Primary else ButtonKind.Glass,
         ) { CoinGlyph(it) }
-        PillButton("Emergency override (free)", { host.act { emergencyOverride() } }, kind = ButtonKind.Danger) { SosGlyph(it) }
         if (!locked) PillButton("Pause schedule", { host.act { pause() } }, kind = ButtonKind.Glass) { PauseGlyph(it) }
         return
     }
@@ -198,7 +196,6 @@ private fun Tiles(host: AppHost, state: AppState, locked: Boolean, missed: Boole
             "Credits", { host.goToCredits() }, Modifier.weight(1f), accent = Ocean.Aqua,
             detail = "${state.ledger.balance} left",
         ) { CoinGlyph(it) }
-        ActionTile("Override", { host.act { emergencyOverride() } }, Modifier.weight(1f), accent = Ocean.Coral, detail = "Always free") { SosGlyph(it) }
     }
 }
 
@@ -291,7 +288,7 @@ fun labelFor(kind: HistoryKind) = when (kind) {
     HistoryKind.CHECK_IN -> "Check-in recorded"
     HistoryKind.CHECK_IN_CONFIRMED_BY_USER -> "Check-in confirmed by you"
     HistoryKind.BYPASS_CREDIT -> "Bypass using a credit"
-    HistoryKind.BYPASS_EMERGENCY -> "Emergency override"
+    HistoryKind.BYPASS_EMERGENCY -> "Earlier override (no longer offered)"
     HistoryKind.PAUSED -> "Schedule paused"
     HistoryKind.RESUMED -> "Schedule resumed"
     HistoryKind.CREDITS_BOUGHT -> "Test credits added"

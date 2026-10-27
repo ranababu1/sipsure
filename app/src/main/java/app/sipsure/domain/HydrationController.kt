@@ -3,6 +3,7 @@ package app.sipsure.domain
 import java.time.ZoneId
 import java.util.UUID
 
+/** BYPASS_EMERGENCY is no longer produced (the free override was removed) but stays so old saved history still loads. */
 enum class HistoryKind { CHECK_IN, CHECK_IN_CONFIRMED_BY_USER, BYPASS_CREDIT, BYPASS_EMERGENCY, PAUSED, RESUMED, CREDITS_BOUGHT, ADVANCE_TAKEN, ADVANCE_REPAID }
 
 data class HistoryEvent(val atMs: Long, val kind: HistoryKind)
@@ -111,6 +112,7 @@ class HydrationController(
 
     /** [verdict] comes from [PhotoCheck]; [hash] is remembered to catch resubmitted photos. */
     fun submitCheckIn(verdict: CheckInVerdict, hash: Long): String? {
+        if (deviceLockActive) return LOCKED_MESSAGE
         if (state.policy.phase !in ESCALATED_PHASES) return "No check-in is due right now."
         return when (verdict.outcome) {
             CheckInOutcome.RETRY_NEEDED -> verdict.message
@@ -121,6 +123,7 @@ class HydrationController(
 
     /** The user vouches for a photo flagged for review; recorded as such, not as verified. */
     fun confirmReviewedCheckIn(hash: Long): String? {
+        if (deviceLockActive) return LOCKED_MESSAGE
         if (state.policy.phase !in ESCALATED_PHASES) return "No check-in is due right now."
         return recordCheckIn(hash, HistoryKind.CHECK_IN_CONFIRMED_BY_USER)
     }
@@ -146,15 +149,6 @@ class HydrationController(
         }
     }
 
-    /** Always free and always available once set up; safety paths are never gated on credits. */
-    fun emergencyOverride(): String? {
-        if (state.policy.phase == Phase.SETUP_REQUIRED || state.policy.phase == Phase.RECOVERY_REQUIRED) {
-            return "Emergency override isn't needed yet."
-        }
-        startBypass(state.ledger, HistoryKind.BYPASS_EMERGENCY, clock())
-        return null
-    }
-
     private fun startBypass(ledger: CreditLedger, kind: HistoryKind, now: Long) {
         val until = now + BYPASS_DURATION_MS
         val policy = reduce(PolicyEvent.BypassStarted(until, schedule.nextDueAfter(until, zone())))
@@ -163,15 +157,26 @@ class HydrationController(
         tick()
     }
 
-    /** Enabling needs real device support; changes are refused while locked so the override path stays the only exit. */
+    /** True while any borrowed credit is unpaid; the app can't be uninstalled until it is repaid. */
+    fun hasUnpaidAdvance(): Boolean = state.ledger.outstandingAdvances(clock()).isNotEmpty()
+
+    /** The phone-lock setup (device ownership) can only be given up with no unpaid advance and while not locked. */
+    fun removeLockSetupBlocker(): String? = when {
+        deviceLockActive -> LOCKED_MESSAGE
+        hasUnpaidAdvance() -> "Repay your borrowed credit first. SipSure can't be removed while one is unpaid."
+        else -> null
+    }
+
+    /** Enabling needs real device support; changes are refused while locked, when only credits unlock the phone. */
     fun setDeviceLock(enabled: Boolean): String? {
         if (enabled && !deviceEnforcementSupported()) return "Phone lock isn't available on this device."
-        if (deviceLockActive) return "Use the emergency override first."
+        if (deviceLockActive) return LOCKED_MESSAGE
         if (state.deviceLockEnabled != enabled) update(state.copy(deviceLockEnabled = enabled))
         return null
     }
 
     fun pause(): String? {
+        if (deviceLockActive) return LOCKED_MESSAGE
         val policy = reduce(PolicyEvent.PauseRequested)
         if (policy == state.policy) return "The schedule can't be paused right now."
         update(state.copy(policy = policy).withHistory(HistoryKind.PAUSED, clock()))
@@ -253,6 +258,7 @@ class HydrationController(
 
     companion object {
         const val BYPASS_DURATION_MS = 60L * 60 * 1000
+        const val LOCKED_MESSAGE = "The phone is locked. Only a credit unlocks it."
         const val MAX_HASHES = 20
         const val MAX_HISTORY = 100
         private val QUIET_PHASES = setOf(Phase.ACTIVE, Phase.ADVANCE_OUTSTANDING, Phase.ADVANCE_OVERDUE)

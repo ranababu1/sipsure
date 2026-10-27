@@ -68,6 +68,8 @@ class MainActivity : ComponentActivity() {
         }
         host.syncFromController()
         applyDeviceLock()
+        // A borrowed credit can't be dodged by uninstalling: block it until the loan is repaid.
+        app.deviceLock.setUninstallBlocked(controller.hasUnpaidAdvance())
     }
 
     private fun afterAction() {

@@ -34,6 +34,7 @@ class SipSureApp : Application() {
     /** Call after any controller action so the next alarm matches the new state. */
     fun onStateChanged() {
         scheduler.reschedule(controller.state, System.currentTimeMillis())
+        deviceLock.setUninstallBlocked(controller.hasUnpaidAdvance())
     }
 
     /** Brings the app forward so the phone lock can engage; only attempted when a lock is actually due. */

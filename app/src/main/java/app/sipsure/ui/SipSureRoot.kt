@@ -149,7 +149,7 @@ private fun PhotoOutcomeDialog(outcome: PhotoOutcome, host: AppHost) {
         PhotoOutcome.NoCamera -> AlertDialog(
             onDismissRequest = dismiss,
             title = { Text("No camera app found") },
-            text = { Text("You can still use a credit, the emergency override or pause.") },
+            text = { Text("You can still use a credit or pause.") },
             confirmButton = { TextButton(dismiss) { Text("OK") } },
         )
     }

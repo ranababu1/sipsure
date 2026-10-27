@@ -294,3 +294,29 @@ enforcement.**
 5.  Be honest about the limits of photo verification and device control.
 6.  Keep the MVP small and prove the core habit loop before adding
     complexity.
+
+------------------------------------------------------------------------
+
+## Amendment 2026-10-28 (user-directed product change)
+
+The product owner explicitly directed these changes. Where they conflict
+with sections above, **this amendment wins**:
+
+1.  **No free emergency override, ever.** Section 5.6's "readily
+    discoverable emergency override" and any free bypass are removed.
+2.  **Locked phone (device-owner mode only):** other than emergency and
+    incoming calls, the phone unlocks only when a credit is used
+    (bought, or borrowed as an emergency advance). A photo check-in no
+    longer unlocks a phone that is already locked; a photo before the
+    lock engages still prevents it.
+3.  **Advances:** repayment within 24 hours as before. While any advance
+    is unpaid, SipSure cannot be uninstalled on a device where it is
+    device owner; uninstalling is allowed once the advance is repaid.
+    On ordinary unmanaged installs nothing blocks uninstalling.
+4.  **Still true (not changed):** emergency calling and incoming calls
+    always work; overdue advances never delete data; whole-phone lock is
+    opt-in with a clear consent dialog; nothing is deleted as a penalty.
+
+Known risks the owner accepted by directing this: no free way out of the
+lock for non-emergency needs, and store/legal review (section 11) is
+still required before any public release.

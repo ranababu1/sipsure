@@ -124,7 +124,7 @@ private fun HowItWorks() {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         StepCard("1", "You get a nudge", "At the interval you choose. Quiet hours keep nights free.") { DropGlyph(it, 24.dp) }
         StepCard("2", "Snap a sip", "Take a quick photo of you drinking. It's checked on your phone, then deleted.") { CameraGlyph(it) }
-        StepCard("3", "Missed one?", "A restriction screen appears. A credit or the free emergency override lifts it, and calls always work.") { LockGlyph(it) }
+        StepCard("3", "Missed one?", "A restriction screen appears. A credit lifts it, and calls always work. If the optional phone lock is on, only a credit unlocks the phone.") { LockGlyph(it) }
     }
 }
 
@@ -154,7 +154,8 @@ private fun Privacy(consented: Boolean, onConsent: (Boolean) -> Unit) {
             Fact("Only a tiny fingerprint is kept, to spot repeat photos.")
             Fact("Photo checks can't prove you drank water, or how much.")
             Fact("Credits are free test credits. No real money is charged.")
-            Fact("The optional phone lock is off unless you set it up, and it always allows emergency calls.")
+            Fact("The optional phone lock is off unless you set it up. When on, only a credit unlocks the phone, and emergency calls always work.")
+            Fact("A borrowed credit must be repaid within 24 hours. While one is unpaid, SipSure can't be uninstalled on a phone set up for the lock.")
         }
     }
     Spacer(Modifier.height(16.dp))

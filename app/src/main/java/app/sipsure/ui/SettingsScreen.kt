@@ -108,7 +108,7 @@ private fun PhoneLockCard(host: AppHost) {
             )
         } else {
             Text(
-                "Home, recents and notifications stop working until you check in, use a credit or use the free emergency override. Emergency calls and incoming calls always work. Nothing is deleted.",
+                "After a missed check-in the phone locks until a credit is used (borrowing one counts). Home, recents and notifications stop working. Emergency calls and incoming calls always work. Nothing is deleted. While a borrowed credit is unpaid, SipSure can't be uninstalled.",
                 style = MaterialTheme.typography.bodyMedium, color = Ocean.TextMid,
             )
             Spacer(Modifier.height(14.dp))
@@ -122,9 +122,10 @@ private fun PhoneLockCard(host: AppHost) {
             title = { Text("Turn on phone lock?") },
             text = {
                 Text(
-                    "If you miss a check-in, your whole phone will be locked to SipSure after the grace period.\n\n" +
-                        "You can always make emergency calls, answer calls and use the free emergency override. " +
-                        "A photo check-in or a credit also unlocks it, and you can turn this off here whenever the phone isn't locked.",
+                    "If you miss a check-in, your whole phone is locked to SipSure after the grace period.\n\n" +
+                        "Only a credit unlocks it; a photo no longer does. You can borrow a credit and repay it within 24 hours, " +
+                        "and while a borrowed credit is unpaid SipSure can't be uninstalled.\n\n" +
+                        "Emergency calls and incoming calls always work. You can turn this off here whenever the phone isn't locked.",
                 )
             },
             confirmButton = { TextButton({ confirmOn = false; host.act { setDeviceLock(true) } }) { Text("Turn on") } },
@@ -135,11 +136,11 @@ private fun PhoneLockCard(host: AppHost) {
         AlertDialog(
             onDismissRequest = { confirmRemove = false },
             title = { Text("Remove phone-lock setup?") },
-            text = { Text("SipSure gives up device-owner status, so the phone lock can't be used and the app can be uninstalled normally.") },
+            text = { Text("SipSure gives up device-owner status, so the phone lock can't be used and the app can be uninstalled normally. This is only possible while no borrowed credit is unpaid.") },
             confirmButton = {
                 TextButton({
                     confirmRemove = false
-                    host.act { setDeviceLock(false) ?: run { host.removeLockSetup(); null } }
+                    host.act { setDeviceLock(false) ?: removeLockSetupBlocker() ?: run { host.removeLockSetup(); null } }
                 }) { Text("Remove") }
             },
             dismissButton = { TextButton({ confirmRemove = false }) { Text("Cancel") } },
