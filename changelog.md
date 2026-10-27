@@ -10,8 +10,8 @@ Newest first.
 - Settings: explanation, consent dialog, on/off, "Remove phone-lock setup" (clears device owner so the app can be uninstalled). Onboarding and missed-check-in text now describe the optional lock honestly.
 - Debug builds only (`src/debug`): `DebugTimeReceiver` moves the clock on a device-owner test device. It is not in release builds.
 - Decision: no anti-uninstall measures beyond what device-owner status inherently implies; removal is one tap in Settings (when not locked) or `adb shell dpm remove-active-admin`. Deleted-data and calling restrictions: none.
-- Verified: 57 unit tests pass, build succeeds. On the emulator (set up with `adb shell dpm set-device-owner app.sipsure/.platform.SipSureAdminReceiver`): escalation to lock via clock jumps, `mLockTaskModeState=LOCKED`, Home key blocked, camera opens, photo check-in unlocks, credit bypass unlocks, dialer opens while locked.
-- NOT verified: free emergency override while locked on-device (unit-tested only), behaviour after reboot while locked, real-phone behaviour (OEM variations), incoming call UI while locked, background launch of the lock from the alarm receiver without the app open.
+- Verified: 57 unit tests pass, build succeeds. On the emulator (set up with `adb shell dpm set-device-owner app.sipsure/.platform.SipSureAdminReceiver`): escalation to lock via clock jumps, `mLockTaskModeState=LOCKED`, Home key blocked, camera opens, photo check-in unlocks, credit bypass unlocks, free emergency override unlocks, dialer opens while locked.
+- NOT verified: behaviour after reboot while locked, real-phone behaviour (OEM variations), incoming call UI while locked, background launch of the lock from the alarm receiver without the app open.
 
 ## 2026-10-27 — Android app: persistence, reminders, UI, photo check-in
 
