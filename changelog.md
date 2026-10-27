@@ -2,6 +2,17 @@
 
 Newest first.
 
+## 2026-10-27 — Optional whole-phone lock (device owner, lock-task mode)
+
+- Requested by the user as an explicit exception to the "app-level only" default in plan.md section 9. Implemented only through the supported Android lock-task API, only when SipSure is the device owner, only after an explicit in-app opt-in, and with the plan.md/instructions.md safety rules kept.
+- `platform/DeviceLock` + `SipSureAdminReceiver`: availability = `isDeviceOwnerApp`. While locked, allowed packages are SipSure, the dialer (emergency and incoming calls), the camera app (check-in photo) and the permission dialog; home, recents and notifications are disabled.
+- Lock engages only when `HydrationController.deviceLockActive` (opted in + supported + RESTRICTED_IN_APP) and releases on every exit: photo check-in, credit, free emergency override. The setting cannot be changed while locked. Losing device ownership falls back to DEVICE_ENFORCEMENT_UNAVAILABLE (in-app screen).
+- Settings: explanation, consent dialog, on/off, "Remove phone-lock setup" (clears device owner so the app can be uninstalled). Onboarding and missed-check-in text now describe the optional lock honestly.
+- Debug builds only (`src/debug`): `DebugTimeReceiver` moves the clock on a device-owner test device. It is not in release builds.
+- Decision: no anti-uninstall measures beyond what device-owner status inherently implies; removal is one tap in Settings (when not locked) or `adb shell dpm remove-active-admin`. Deleted-data and calling restrictions: none.
+- Verified: 57 unit tests pass, build succeeds. On the emulator (set up with `adb shell dpm set-device-owner app.sipsure/.platform.SipSureAdminReceiver`): escalation to lock via clock jumps, `mLockTaskModeState=LOCKED`, Home key blocked, camera opens, photo check-in unlocks, credit bypass unlocks, dialer opens while locked.
+- NOT verified: free emergency override while locked on-device (unit-tested only), behaviour after reboot while locked, real-phone behaviour (OEM variations), incoming call UI while locked, background launch of the lock from the alarm receiver without the app open.
+
 ## 2026-10-27 — Android app: persistence, reminders, UI, photo check-in
 
 - Added `data/StateCodec` + `PrefsStateStore`: versioned JSON in app-private preferences, committed synchronously; unreadable data becomes `RECOVERY_REQUIRED` (reset path) instead of a crash.

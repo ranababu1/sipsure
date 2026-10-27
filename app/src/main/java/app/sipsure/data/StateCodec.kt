@@ -36,6 +36,7 @@ object StateCodec {
         // Hashes are strings because JSON numbers lose precision beyond 53 bits.
         put("hashes", JSONArray(state.photoHashes.map { it.toString() }))
         put("history", JSONArray(state.history.map { JSONObject().put("at", it.atMs).put("kind", it.kind.name) }))
+        put("deviceLock", state.deviceLockEnabled)
     }.toString()
 
     fun decode(json: String): AppState = try {
@@ -61,6 +62,7 @@ object StateCodec {
             photoHashes = root.getJSONArray("hashes").let { a -> (0 until a.length()).map { a.getString(it).toLong() } },
             history = root.getJSONArray("history").objects()
                 .map { HistoryEvent(it.getLong("at"), HistoryKind.valueOf(it.getString("kind"))) },
+            deviceLockEnabled = root.optBoolean("deviceLock", false),
         )
     } catch (e: JSONException) {
         throw StateCorruptedException(e)

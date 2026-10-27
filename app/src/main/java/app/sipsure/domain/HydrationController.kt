@@ -14,6 +14,8 @@ data class AppState(
     val ledger: CreditLedger = CreditLedger.EMPTY,
     val photoHashes: List<Long> = emptyList(),
     val history: List<HistoryEvent> = emptyList(),
+    /** User opted in to the device-owner phone lock (plan.md 5.3). Only honoured while the device supports it. */
+    val deviceLockEnabled: Boolean = false,
 )
 
 interface StateStore {
@@ -36,12 +38,18 @@ class HydrationController(
     private val clock: () -> Long,
     private val zone: () -> ZoneId = { ZoneId.systemDefault() },
     private val newId: () -> String = { UUID.randomUUID().toString() },
+    /** Whether the device really supports whole-device enforcement right now (device-owner check). */
+    private val deviceEnforcementSupported: () -> Boolean = { false },
 ) {
     var state: AppState = AppState()
         private set
 
     private val schedule get() = state.schedule
-    private val config get() = schedule.toPolicyConfig()
+    private val config get() = schedule.toPolicyConfig(state.deviceLockEnabled, deviceEnforcementSupported())
+
+    /** True while the phone should be locked to the app: opted in, supported, and a check-in was missed. */
+    val deviceLockActive: Boolean
+        get() = state.deviceLockEnabled && deviceEnforcementSupported() && state.policy.phase == Phase.RESTRICTED_IN_APP
 
     /** Loads saved state. Unreadable data puts the app in RECOVERY_REQUIRED instead of crashing. */
     fun start() {
@@ -155,6 +163,14 @@ class HydrationController(
         tick()
     }
 
+    /** Enabling needs real device support; changes are refused while locked so the override path stays the only exit. */
+    fun setDeviceLock(enabled: Boolean): String? {
+        if (enabled && !deviceEnforcementSupported()) return "Phone lock isn't available on this device."
+        if (deviceLockActive) return "Use the emergency override first."
+        if (state.deviceLockEnabled != enabled) update(state.copy(deviceLockEnabled = enabled))
+        return null
+    }
+
     fun pause(): String? {
         val policy = reduce(PolicyEvent.PauseRequested)
         if (policy == state.policy) return "The schedule can't be paused right now."
@@ -212,7 +228,10 @@ class HydrationController(
     )
 
     private fun reduce(event: PolicyEvent, forSchedule: Schedule = schedule) =
-        PolicyEngine.reduce(state.policy, event, forSchedule.toPolicyConfig())
+        PolicyEngine.reduce(
+            state.policy, event,
+            forSchedule.toPolicyConfig(state.deviceLockEnabled, deviceEnforcementSupported()),
+        )
 
     private fun update(new: AppState) {
         store.save(new)

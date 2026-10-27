@@ -29,8 +29,14 @@
 ## Permissions / services
 `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`. No camera permission (system camera app). No network, backend, analytics.
 
+## Phone lock (optional, advanced)
+- Off by default. Works only when SipSure is device owner: `adb shell dpm set-device-owner app.sipsure/.platform.SipSureAdminReceiver` (needs a phone with no accounts signed in). Remove via Settings > "Remove phone-lock setup".
+- When enabled and a check-in is missed past grace, lock-task mode locks the phone to SipSure (plus dialer, camera, permission dialog). Released by photo check-in, credit, or the free emergency override.
+- Verified on the emulator for lock, camera, photo and credit unlock, dialer access; see changelog for what is not verified.
+- Debug builds include `DebugTimeReceiver` (clock jumps for testing): `adb shell am broadcast -n app.sipsure/app.sipsure.debug.DebugTimeReceiver --ei minutes 30`.
+
 ## Known limitations / risks
-- Whole-device enforcement is not implemented or validated; only an in-app screen exists. Device-enforcement flag is always "unsupported".
+- Phone lock has only been tested on one emulator; real phones, OEM skins and reboot-while-locked are untested. Without device owner the app falls back to the in-app screen.
 - Alarms are inexact; reminders can be late on some devices. Opening the app re-evaluates time.
 - Payments are test-mode only; no real billing, no server validation, no privacy policy or terms yet.
 - Photo checks are heuristics (size, light, freshness, near-duplicate hash), not proof of drinking.

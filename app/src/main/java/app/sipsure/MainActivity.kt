@@ -2,6 +2,7 @@ package app.sipsure
 
 import android.Manifest
 import android.app.Activity
+import android.app.ActivityManager
 import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -96,7 +97,10 @@ class MainActivity : Activity() {
         app.onStateChanged()
         // Forms keep user input, so only passive screens refresh on the timer.
         val editing = after == Phase.SETUP_REQUIRED || tab == Tab.SETTINGS
-        if (!editing || scroll.childCount == 0) render()
+        val lockDue = controller.deviceLockActive
+        // A due phone lock always takes over the screen, even from a form.
+        if (lockDue) tab = Tab.HOME
+        if (lockDue || !editing || scroll.childCount == 0) render() else applyDeviceLock()
     }
 
     private fun render() {
@@ -116,6 +120,23 @@ class MainActivity : Activity() {
         }
         scroll.removeAllViews()
         scroll.addView(page)
+        applyDeviceLock()
+    }
+
+    /** Engages lock-task mode exactly while the controller says the phone lock is due, and releases it otherwise. */
+    private fun applyDeviceLock() {
+        val inLockTask = getSystemService(ActivityManager::class.java).lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
+        try {
+            if (controller.deviceLockActive && !inLockTask) {
+                app.deviceLock.prepare()
+                startLockTask()
+            } else if (!controller.deviceLockActive && inLockTask) {
+                stopLockTask()
+            }
+        } catch (e: SecurityException) {
+            // Ownership was revoked between the check and the call; stay usable rather than half-locked.
+            Toast.makeText(this, "Phone lock couldn't start on this device.", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun finishAction(error: String?) {
@@ -140,7 +161,8 @@ class MainActivity : Activity() {
                 page.card(NEUTRAL) {
                     body("What happens if you miss a check-in", 16f).also { it.setTypeface(it.typeface, android.graphics.Typeface.BOLD) }
                     body("1. A reminder opens a short check-in window.\n2. A grace period follows with a warning.\n3. Then an in-app accountability screen appears inside SipSure.")
-                    body("SipSure never locks your phone. Calls, emergency calling and all other apps keep working, and you can uninstall SipSure at any time.")
+                    body("By default SipSure only restricts itself: calls, emergency calling and all other apps keep working, and you can uninstall it at any time.")
+                    body("An optional advanced phone lock exists for phones set up for it. It is off unless you turn it on in Settings, and it always allows emergency calls and the free emergency override.")
                 }
                 page.button("Continue", primary = true) { onboardingStep = 1; render() }
             }
@@ -248,22 +270,32 @@ class MainActivity : Activity() {
         if (p.phase != Phase.PAUSED && p.phase != Phase.RESTRICTED_IN_APP && p.phase != Phase.DEVICE_ENFORCEMENT_UNAVAILABLE) {
             page.button("Pause schedule") { finishAction(controller.pause()) }
         }
-        page.button("Emergency override (free)") { finishAction(controller.emergencyOverride()) }
+        if (!controller.deviceLockActive) {
+            page.button("Emergency override (free)") { finishAction(controller.emergencyOverride()) }
+        }
         page.caption("Emergency override is always free and pauses check-ins for an hour. It never needs credits.")
         recentHistory(page, state)
     }
 
     private fun restricted(page: LinearLayout, state: AppState, now: Long) {
+        val locked = controller.deviceLockActive
         page.card(SOFT_RED) {
             body("Check-in missed", 20f)
-            body("That's okay. It happens when you're busy, driving or asleep. SipSure is showing this screen until you check in, use a bypass, or pause.")
-            body("Your phone is not locked. Calls, emergency calling and other apps work as normal.")
+            body("That's okay. It happens when you're busy, driving or asleep. SipSure is showing this screen until you check in, use a credit, or use the emergency override.")
+            body(
+                if (locked) "Your phone is locked to SipSure until then. You can still make emergency calls and answer calls."
+                else "Your phone is not locked. Calls, emergency calling and other apps work as normal.",
+            )
         }
         checkInButton(page)
+        if (locked) {
+            page.button("Emergency call") { startActivity(Intent(Intent.ACTION_DIAL)) }
+            page.button("Emergency override (free)") { finishAction(controller.emergencyOverride()) }
+        }
         val ledger = state.ledger
         page.button("Use 1 credit to bypass (${ledger.balance} left)") { finishAction(controller.redeemBypassWithCredit()) }
         if (ledger.balance == 0) page.button("No credits? See emergency advance") { tab = Tab.CREDITS; render() }
-        page.button("Pause schedule") { finishAction(controller.pause()) }
+        if (!locked) page.button("Pause schedule") { finishAction(controller.pause()) }
         advanceBanner(page, state, now)
     }
 
@@ -281,7 +313,11 @@ class MainActivity : Activity() {
 
     private fun consequenceText(s: Schedule) =
         "If a check-in is missed: a ${s.checkInWindowMinutes}-minute window, then a ${s.graceMinutes}-minute grace period, " +
-            "then an in-app accountability screen. Your phone is never locked."
+            if (controller.state.deviceLockEnabled && app.deviceLock.isAvailable()) {
+                "then the phone lock turns on until you check in, use a credit or use the emergency override."
+            } else {
+                "then an in-app accountability screen. Your phone is not locked."
+            }
 
     private fun recentHistory(page: LinearLayout, state: AppState) {
         if (state.history.isEmpty()) return
@@ -369,10 +405,50 @@ class MainActivity : Activity() {
             if (error == null) Toast.makeText(this, "Schedule saved.", Toast.LENGTH_SHORT).show()
             finishAction(error)
         }
-        page.heading("About enforcement", 18f)
-        page.body("SipSure only restricts itself (an in-app screen). Whole-phone locking isn't available, and SipSure never blocks calls, emergency calling or uninstalling.")
+        phoneLockSection(page, state)
         page.heading("Privacy", 18f)
         page.body("Everything is stored on this phone. Photos are checked on-device and deleted right away; only a small fingerprint of recent photos is kept to detect repeats. No analytics or tracking.")
+    }
+
+    private fun phoneLockSection(page: LinearLayout, state: AppState) {
+        page.heading("Phone lock (advanced)", 18f)
+        if (!app.deviceLock.isAvailable()) {
+            page.body("Off. By default SipSure only restricts itself with an in-app screen and never blocks calls, other apps or uninstalling.")
+            page.caption(
+                "A full phone lock needs SipSure to be set up as the device owner, which Android only allows on a phone with no accounts " +
+                    "signed in (for example a dedicated or freshly reset phone). From a computer with USB debugging on, run:\n" +
+                    "adb shell dpm set-device-owner app.sipsure/.platform.SipSureAdminReceiver",
+            )
+            return
+        }
+        page.card(AMBER) {
+            body("What the phone lock does")
+            body("When a check-in is missed and the grace period ends, the phone is locked to SipSure. Home, recents and notifications stop working. You can still make emergency calls and answer calls, and the camera opens for check-in photos.")
+            body("It lifts as soon as you check in, use a credit, or use the free emergency override. Nothing is deleted.")
+        }
+        if (state.deviceLockEnabled) {
+            page.body("Phone lock is ON.")
+            page.button("Turn off phone lock") { finishAction(controller.setDeviceLock(false)) }
+        } else {
+            page.body("Phone lock is OFF.")
+            page.button("Turn on phone lock", primary = true) { confirmPhoneLock() }
+        }
+        page.button("Remove phone-lock setup (allows uninstalling)") {
+            finishAction(controller.setDeviceLock(false) ?: run { app.deviceLock.removeCapability(); null })
+        }
+    }
+
+    private fun confirmPhoneLock() {
+        AlertDialog.Builder(this)
+            .setTitle("Turn on phone lock?")
+            .setMessage(
+                "If you miss a check-in, your whole phone will be locked to SipSure after the grace period.\n\n" +
+                    "You can always make emergency calls, answer calls and use the free emergency override. " +
+                    "Checking in with a photo or using a credit also unlocks it. You can turn this off here at any time.",
+            )
+            .setPositiveButton("Turn on") { _, _ -> finishAction(controller.setDeviceLock(true)) }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun navigation(page: LinearLayout) {

@@ -9,6 +9,12 @@
     <!-- Photos are taken by the system camera app, so SipSure itself needs no CAMERA permission. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <!-- Lets the app find the camera and dialer packages to allow during the optional phone lock. -->
+    <queries>
+        <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
+        <intent><action android:name="android.intent.action.DIAL" /></intent>
+    </queries>
+
     <application
         android:name=".SipSureApp"
         android:allowBackup="false"
@@ -18,7 +24,8 @@
 
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -36,6 +43,19 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
                 <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Only usable when SipSure is deliberately made device owner; see Settings > Phone lock. -->
+        <receiver
+            android:name=".platform.SipSureAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
             </intent-filter>
         </receiver>
 

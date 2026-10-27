@@ -15,6 +15,7 @@ class AlarmReceiver : BroadcastReceiver() {
         val after = app.controller.state.policy.phase
         if (after != before) app.notifier.show(after)
         app.onStateChanged()
+        app.bringToFrontIfLockDue()
     }
 }
 
@@ -29,5 +30,6 @@ class SystemEventsReceiver : BroadcastReceiver() {
         val phase = app.controller.state.policy.phase
         if (phase == Phase.CHECK_IN_DUE || phase == Phase.GRACE_PERIOD) app.notifier.show(phase)
         app.onStateChanged()
+        app.bringToFrontIfLockDue()
     }
 }

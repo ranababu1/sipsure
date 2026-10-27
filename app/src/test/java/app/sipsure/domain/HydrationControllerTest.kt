@@ -162,6 +162,67 @@ class HydrationControllerTest {
         assertEquals(Phase.SETUP_REQUIRED, broken.phase())
     }
 
+    private fun lockController(supported: () -> Boolean) =
+        HydrationController(store, { now }, { ZoneId.of("UTC") }, { "id${ids++}" }, supported).also {
+            it.start()
+            assertNull(it.completeSetup(noQuiet))
+        }
+
+    @Test
+    fun phoneLockCannotBeEnabledWithoutDeviceSupport() {
+        val c = lockController { false }
+        assertNotNull(c.setDeviceLock(true))
+        assertEquals(false, c.state.deviceLockEnabled)
+    }
+
+    @Test
+    fun phoneLockEngagesOnlyWhenRestrictedAndLiftsOnEveryExit() {
+        val c = lockController { true }
+        assertNull(c.setDeviceLock(true))
+        assertEquals(false, c.deviceLockActive)
+        c.restrict()
+        assertTrue(c.deviceLockActive)
+
+        // Photo check-in, credit, emergency override and pause (before lock) each release it.
+        assertNull(c.confirmReviewedCheckIn(1))
+        assertEquals(false, c.deviceLockActive)
+
+        c.restrict()
+        assertNull(c.emergencyOverride())
+        assertEquals(false, c.deviceLockActive)
+
+        c.buyCredits(CreditPack(1, "1"))
+        now = c.state.policy.nextDueAtMs!! + 20 * min
+        c.tick()
+        assertTrue(c.deviceLockActive)
+        assertNull(c.redeemBypassWithCredit())
+        assertEquals(false, c.deviceLockActive)
+    }
+
+    @Test
+    fun phoneLockSettingCannotBeChangedWhileLockedAndNeverBlocksOverride() {
+        val c = lockController { true }
+        c.setDeviceLock(true)
+        c.restrict()
+        assertNotNull(c.setDeviceLock(false))
+        assertTrue(c.state.deviceLockEnabled)
+        assertNull(c.emergencyOverride())
+        assertNull(c.setDeviceLock(false))
+    }
+
+    @Test
+    fun lostDeviceOwnershipFallsBackToAppLevelRestriction() {
+        var supported = true
+        val c = lockController { supported }
+        c.setDeviceLock(true)
+        supported = false
+        now = c.state.policy.nextDueAtMs!! + 20 * min
+        c.tick()
+        assertEquals(Phase.DEVICE_ENFORCEMENT_UNAVAILABLE, c.phase())
+        assertEquals(false, c.deviceLockActive)
+        assertTrue(c.state.policy.appRestricted)
+    }
+
     @Test
     fun updatingScheduleRecomputesNextDue() {
         val c = ready()

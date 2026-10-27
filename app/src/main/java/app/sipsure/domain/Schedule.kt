@@ -28,11 +28,14 @@ data class Schedule(
         else -> null
     }
 
-    fun toPolicyConfig(deviceEnforcementRequested: Boolean = false) = PolicyConfig(
+    fun toPolicyConfig(
+        deviceEnforcementRequested: Boolean = false,
+        deviceEnforcementSupported: Boolean = false,
+    ) = PolicyConfig(
         checkInWindowMs = checkInWindowMinutes * MS_PER_MINUTE,
         graceMs = graceMinutes * MS_PER_MINUTE,
         deviceEnforcementRequested = deviceEnforcementRequested,
-        deviceEnforcementSupported = false,
+        deviceEnforcementSupported = deviceEnforcementSupported,
     )
 
     private val hasQuietHours get() = quietStartMinuteOfDay != quietEndMinuteOfDay

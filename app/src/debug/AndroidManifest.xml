@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Debug builds only: lets a developer move the clock on a device-owner test device. -->
+        <receiver
+            android:name="app.sipsure.debug.DebugTimeReceiver"
+            android:exported="true" />
+    </application>
+</manifest>
