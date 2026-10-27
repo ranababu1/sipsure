@@ -39,13 +39,15 @@ import app.sipsure.ui.theme.Ocean
 import kotlin.math.max
 
 @Composable
-fun CreditsScreen(host: AppHost, now: Long) {
+fun CreditsScreen(host: AppHost, now: Long, onBack: () -> Unit = {}) {
     val ledger = host.state.ledger
     var confirmAdvance by remember { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
     val remaining = ledger.advancesRemaining(now)
 
     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        // While the phone is locked the nav bar is hidden, so give a clear way back.
+        if (host.deviceLockActive) PillButton("Back", onBack, kind = ButtonKind.Glass)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Credits", style = MaterialTheme.typography.headlineLarge, color = Ocean.TextHigh, modifier = Modifier.weight(1f))
             Box(Modifier.clip(RoundedCornerShape(50)).springClick { showInfo = true }) {

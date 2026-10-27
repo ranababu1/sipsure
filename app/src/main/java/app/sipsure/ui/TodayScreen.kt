@@ -77,8 +77,11 @@ fun TodayScreen(host: AppHost, now: Long) {
 
         Tiles(host, state, locked, missed)
         AdvanceNotice(state, now)
-        DropsToday(state, now)
-        Recent(state)
+        // A missed check-in is a focused screen: just the ways out, nothing else competing for attention.
+        if (!missed) {
+            DropsToday(state, now)
+            Recent(state)
+        }
     }
 }
 
@@ -174,28 +177,8 @@ private fun Greeting(state: AppState, now: Long) {
 
 @Composable
 private fun Tiles(host: AppHost, state: AppState, locked: Boolean, missed: Boolean) {
-    val paused = state.policy.phase == Phase.PAUSED
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (!paused && !missed) {
-            ActionTile("Pause", { host.act { pause() } }, Modifier.weight(1f), accent = Ocean.TextMid, detail = "Take a break") { PauseGlyph(it) }
-        }
-        ActionTile(
-            "Credits", { host.goToCredits() }, Modifier.weight(1f), accent = Ocean.Aqua,
-            detail = "${state.ledger.balance} left",
-        ) { CoinGlyph(it) }
-        if (!locked) {
-            ActionTile("Override", { host.act { emergencyOverride() } }, Modifier.weight(1f), accent = Ocean.Coral, detail = "Always free") { SosGlyph(it) }
-        }
-    }
-    if (missed && !locked) {
-        val balance = state.ledger.balance
-        PillButton(
-            if (balance > 0) "Use 1 credit to bypass" else "Out of credits? See emergency advance",
-            { if (balance > 0) host.act { redeemBypassWithCredit() } else host.goToCredits() },
-            kind = ButtonKind.Glass,
-        ) { CoinGlyph(it) }
-    }
-    if (locked) {
+    if (missed) {
+        // A missed check-in is a focused screen: only the ways out.
         val balance = state.ledger.balance
         PillButton(
             if (balance > 0) "Use 1 credit to bypass" else "Out of credits? See emergency advance",
@@ -203,6 +186,19 @@ private fun Tiles(host: AppHost, state: AppState, locked: Boolean, missed: Boole
             kind = ButtonKind.Glass,
         ) { CoinGlyph(it) }
         PillButton("Emergency override (free)", { host.act { emergencyOverride() } }, kind = ButtonKind.Danger) { SosGlyph(it) }
+        if (!locked) PillButton("Pause schedule", { host.act { pause() } }, kind = ButtonKind.Glass) { PauseGlyph(it) }
+        return
+    }
+    val paused = state.policy.phase == Phase.PAUSED
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (!paused) {
+            ActionTile("Pause", { host.act { pause() } }, Modifier.weight(1f), accent = Ocean.TextMid, detail = "Take a break") { PauseGlyph(it) }
+        }
+        ActionTile(
+            "Credits", { host.goToCredits() }, Modifier.weight(1f), accent = Ocean.Aqua,
+            detail = "${state.ledger.balance} left",
+        ) { CoinGlyph(it) }
+        ActionTile("Override", { host.act { emergencyOverride() } }, Modifier.weight(1f), accent = Ocean.Coral, detail = "Always free") { SosGlyph(it) }
     }
 }
 

@@ -50,6 +50,16 @@ class AppHost(
         revision++
     }
 
+    private var lastSeen: AppState? = null
+
+    /** Refreshes the UI if state changed behind its back (alarms, boot and clock receivers also mutate it). */
+    fun syncFromController() {
+        if (controller.state !== lastSeen) {
+            lastSeen = controller.state
+            refresh()
+        }
+    }
+
     fun act(block: HydrationController.() -> String?) {
         message = controller.block()
         afterAction()

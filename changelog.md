@@ -2,6 +2,14 @@
 
 Newest first.
 
+## 2026-10-27 — Locked-state fixes
+
+- Found by running the lock on the emulator: the floating nav stayed visible while locked because state changes made by the clock/alarm receivers did not refresh the root screen. `AppHost.syncFromController()` now refreshes the UI whenever controller state changes behind its back.
+- Missed/locked screen is now focused: no tile row, history or "today" card, just check-in, emergency call (when locked), credit or advance, free override, and pause (when not locked).
+- Out-of-credits while locked used to be a dead end ("See emergency advance" could not leave Today). The Credits screen is now reachable while locked (with a Back button); Settings stays unreachable while locked.
+- Verified on emulator: locked state shows no nav bar, Home key ignored, Credits opens and Back returns, lock stays on. 57 unit tests pass.
+- Note: a clock jump larger than the check-in window is treated as an undelivered reminder and forgiven (restarts the interval) by design; test with exact jumps.
+
 ## 2026-10-27 — UI redesign v2 (ocean look, animated water glass)
 
 - Reason: the Compose v1 UI was Material defaults in a blue palette (stacked cards, paragraphs of copy, stock icons) and was rejected as poor. A brief web search for current trends returned mostly low-quality pages; the design leans on the consistent points it did surface (a fill-up water visual, minimal glanceable screens, Material 3 Expressive spring motion and bold type, streak/progress visuals), not on any specific app.

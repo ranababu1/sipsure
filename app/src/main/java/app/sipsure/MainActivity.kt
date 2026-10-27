@@ -65,8 +65,8 @@ class MainActivity : ComponentActivity() {
         if (after !== before) {
             if (after.policy.phase != before.policy.phase) app.notifier.show(after.policy.phase)
             afterAction()
-            host.refresh()
         }
+        host.syncFromController()
         applyDeviceLock()
     }
 

@@ -62,8 +62,8 @@ fun SipSureRoot(host: AppHost, onTick: () -> Unit) {
         val phase = host.state.policy.phase
         var tab by rememberSaveable { mutableStateOf(0) }
         host.onGoToCredits = { tab = 1 }
-        // A due phone lock always takes over the screen.
-        if (host.deviceLockActive && tab != 0) tab = 0
+        // A due phone lock takes over the screen; only Today and Credits (to reach an advance) stay reachable.
+        if (host.deviceLockActive && tab == 2) tab = 0
 
         val showNav = phase != Phase.SETUP_REQUIRED && phase != Phase.RECOVERY_REQUIRED && !host.deviceLockActive
 
@@ -77,7 +77,7 @@ fun SipSureRoot(host: AppHost, onTick: () -> Unit) {
                     ) {
                         when (tab) {
                             0 -> TodayScreen(host, now)
-                            1 -> CreditsScreen(host, now)
+                            1 -> CreditsScreen(host, now, onBack = { tab = 0 })
                             else -> SettingsScreen(host)
                         }
                         // Room so the last item can scroll above the floating nav.
