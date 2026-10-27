@@ -1,4 +1,3 @@
 <resources>
-    <color name="surface">#FFFFFF</color>
-    <color name="ink">#1B1B1B</color>
+    <color name="window_background">#F3F9FC</color>
 </resources>

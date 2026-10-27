@@ -1,8 +1,6 @@
 <resources>
-    <!-- Light only for now: screens use fixed light surfaces and dark ink for reliable contrast. -->
-    <style name="Theme.SipSure" parent="android:Theme.DeviceDefault.Light.NoActionBar">
-        <item name="android:windowBackground">@color/surface</item>
-        <item name="android:textColorPrimary">@color/ink</item>
-        <item name="android:textColor">@color/ink</item>
+    <!-- Compose draws everything; this only sets the colour shown before the first frame. -->
+    <style name="Theme.SipSure" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
     </style>
 </resources>

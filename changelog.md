@@ -2,6 +2,15 @@
 
 Newest first.
 
+## 2026-10-27 — UI redesign (Jetpack Compose + Material 3)
+
+- Replaced the programmatic-views UI with Compose. Reason: the first UI was functional but unpolished; a designed UI is a clear product requirement. Added dependencies: Compose BOM 2025.06.01 (ui, foundation, material3, icons-core) and activity-compose 1.10.1. Domain, data and platform layers are unchanged.
+- New design: brand theme with light and dark colour schemes, bottom navigation (Today, Credits, Settings), state-coloured hero cards with an animated countdown ring (calm, check-in due, grace, missed, bypass, paused), icon rows, timeline, balance hero and pack cards on Credits, advance cards with a 24h progress bar, slider-based schedule editor with quiet-hours switch, three-step onboarding with consent switch, Material dialogs and snackbars.
+- Structure: `ui/theme/Theme.kt`, `ui/Components.kt`, `TodayScreen`, `CreditsScreen`, `SettingsScreen`, `OnboardingScreen`, `ScheduleEditor`, `SipSureRoot`, `AppHost` (bridge between composables and Android). `MainActivity` is now a `ComponentActivity` that owns camera (`TakePicture`), lock-task mode, dialer and permissions.
+- Behaviour kept: phone lock takes over the screen when due, free emergency override always reachable, photo outcomes shown as dialogs, all texts avoid medical or shaming claims.
+- Verified: build and unit tests pass. On emulator: onboarding (all 3 steps, notification prompt), Today in calm, check-in-due, missed and bypass states, Credits, notification posted when due.
+- NOT re-verified after the redesign: camera/photo flow, phone lock engagement, Settings screen visuals, TalkBack, large font scale, small screens, landscape.
+
 ## 2026-10-27 — Optional whole-phone lock (device owner, lock-task mode)
 
 - Requested by the user as an explicit exception to the "app-level only" default in plan.md section 9. Implemented only through the supported Android lock-task API, only when SipSure is the device owner, only after an explicit in-app opt-in, and with the plan.md/instructions.md safety rules kept.
