@@ -2,6 +2,18 @@
 
 Newest first.
 
+## 2026-10-27 — Android app: persistence, reminders, UI, photo check-in
+
+- Added `data/StateCodec` + `PrefsStateStore`: versioned JSON in app-private preferences, committed synchronously; unreadable data becomes `RECOVERY_REQUIRED` (reset path) instead of a crash.
+- Added `platform/`: `ReminderScheduler` (single inexact `setAndAllowWhileIdle` alarm for the next policy deadline, no exact-alarm permission), `AlarmReceiver`, `SystemEventsReceiver` (boot, time-zone, time change; restarts the interval instead of punishing undelivered reminders), `Notifier`, `PhotoAnalyzer`.
+- Added single-activity UI (`MainActivity`, `ui/Ui.kt`): onboarding with safety, medical, data and enforcement explanations and a consent checkbox; home with consequences and always-visible free emergency override; in-app restriction screen with check-in, credit bypass, advance and pause; credits tab with test-mode packs, advance terms dialog, repayment and ledger; settings.
+- Check-in uses the system camera app through a FileProvider (no CAMERA permission). The photo is analysed on-device and deleted; only a 64-bit hash is kept. Outcomes: accepted, retry, review (user may confirm).
+- Dependency added: `androidx.core:core:1.16.0` (FileProvider only). Test-only: `org.json:json` for codec tests.
+- Decision: light theme only with fixed dark ink; the first dark-theme attempt produced low-contrast grey text on the emulator.
+- Verified: `./gradlew.bat :app:testDebugUnitTest :app:assembleDebug` BUILD SUCCESSFUL, 53 unit tests pass.
+- Verified on emulator (Android 17 image): onboarding, schedule validation and start, pause/resume, credits screen, advance dialog and acceptance, state survives force-stop, advance banner.
+- NOT verified on device: escalation to the restricted screen, camera and photo outcomes, alarms/notifications firing, reboot/time-zone receivers (the emulator clock cannot be changed without root).
+
 ## 2026-10-27 — Policy engine
 
 - Added `domain/PolicyEngine`: pure state machine over the 12 plan.md section 8 phases (`reduce` for events, `advance` to settle elapsed time).

@@ -33,5 +33,9 @@ kotlin {
 }
 
 dependencies {
+    // FileProvider hands the system camera a private file to write the check-in photo into.
+    implementation("androidx.core:core:1.16.0")
     testImplementation("junit:junit:4.13.2")
+    // Android's org.json is stubbed in JVM unit tests; use the real implementation there.
+    testImplementation("org.json:json:20240303")
 }
