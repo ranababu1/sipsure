@@ -204,25 +204,93 @@ push a broken solution.
 -   Never force push without explicit permission.
 -   Verify that the push succeeded. If it fails, report the error and do
     not imply that the remote was updated.
--   Do not create a release or publish a build unless the user requested
-    it or the established release process explicitly calls for it.
+-   Do not create a release or publish a build except through the release process in
+    section 9 (a pushed version tag), and only as that section allows.
 
-## 9. Release and Artifact Rules
+## 9. Release Management
 
--   Use semantic versioning when appropriate and document the project's
-    versioning scheme.
--   Do not include secrets, debug-only bypasses, test payment
-    credentials, or personal data in release artifacts.
--   Build release artifacts from a clean, verified source state.
--   Document build commands, supported Android versions, permissions,
-    signing requirements, known limitations, and installation steps.
--   Keep signing keys outside the repository and never upload them to
-    Git.
--   Do not distribute a production APK until signing, privacy,
-    store-policy, and device-enforcement assumptions have been reviewed.
--   If multiple APKs or other binaries are required, document each
-    artifact's purpose and attach them to the appropriate repository
-    release only after the user-authorized release workflow is verified.
+Releases follow the same flow as the `teacher` repository: a pushed version tag builds, signs and
+publishes a GitHub Release from CI. Nothing is released by hand-uploading a locally built APK.
+
+### Versioning
+
+-   Semantic versioning: `MAJOR.MINOR.PATCH` in `APP_VERSION_NAME` (`gradle.properties`).
+    `APP_VERSION_CODE` is an integer that increases by at least one on every release and never
+    goes down or is reused. These two properties are the only place the version is defined.
+-   Tags are `vMAJOR.MINOR.PATCH` and must equal `APP_VERSION_NAME`; the release workflow fails
+    if they differ.
+-   While the app is `0.x`, a new user-visible feature or behavior change bumps MINOR, a fix or
+    internal change bumps PATCH. `1.0.0` needs the user's explicit approval and the review in the
+    "Before a public or production release" list below.
+
+### Incremental changes trigger a release
+
+-   Each meaningful increment (a feature, a user-visible fix, or a rule change) that is
+    committed and pushed under section 8 also gets its own version: in the same commit, bump
+    `APP_VERSION_NAME` and `APP_VERSION_CODE` and add the version to the top of `changelog.md`.
+-   After CI is green on that commit, tag it and push the tag (`git tag vX.Y.Z` then
+    `git push origin vX.Y.Z`). The tag push publishes the release; do not create the release by
+    other means.
+-   Documentation-only or CI-only changes do not need a release. Changes that touch the app's
+    behavior, rules, or UI always do.
+-   Creating and pushing a tag publishes a build outside this machine, so do it only after the
+    user has asked for releases to be cut automatically (this section, once the user approves
+    it, is that standing request) or for a specific tag. If unsure, ask before tagging.
+
+### Pre-releases
+
+-   A tag with a hyphen (`v0.2.0-rc1`, `v0.2.0-beta1`) publishes as a pre-release and never takes
+    the "Latest" badge. Use it to rehearse the pipeline or share a build that is not ready.
+-   Pre-release suffixes do not change `APP_VERSION_NAME`: `v0.2.0-rc1` ships `0.2.0` with the
+    versionCode the commit declares.
+
+### What the release workflow does (`.github/workflows/release.yml`)
+
+-   Runs on every `v*` tag: checks the tag against the version, runs unit tests, writes the
+    signing files from repository secrets, builds the signed release APK and app bundle with
+    R8 shrinking, verifies the APK signature, and publishes the GitHub Release with
+    `sipsure-rNN.apk` (NN = `APP_VERSION_CODE`).
+-   Archives the signed `.aab` and the R8 `mapping.txt` for 90 days. Keep `mapping.txt` to read
+    release crash traces.
+-   `.github/workflows/ci.yml` runs unit tests and a debug build on every push and pull request.
+    A tag should only be pushed from a commit whose CI run is green.
+
+### Signing key
+
+-   One release keystore signs every release. Android refuses to update an installed app that
+    was signed with a different key, so **losing or replacing this key breaks upgrades for every
+    existing install**.
+-   The keystore and `key.properties` live outside the repository (currently
+    `~/.sipsure-signing/`) and in the repository secrets below. Back them up somewhere private
+    (a password manager or encrypted drive). Never commit them, paste them into chat, issues,
+    logs or documentation, or print them in CI.
+-   Repository secrets (Settings, Secrets and variables, Actions): `ANDROID_KEYSTORE_BASE64`,
+    `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. The workflow fails
+    fast if one is missing.
+-   `key.properties`, `*.jks` and `*.keystore` stay in `.gitignore`. Without `key.properties`
+    the release build is produced unsigned rather than falling back to a debug key.
+-   Rotating the key needs the user's explicit approval and a plan for existing installs
+    (Play App Signing key upgrade, or reinstalling).
+
+### Release artifacts
+
+-   Release builds must not contain debug-only code. Debug-only helpers (such as the test clock
+    receiver) live in `app/src/debug` and are therefore absent from release builds; check the
+    release APK manifest if anything is moved.
+-   Do not include secrets, test payment credentials or personal data in release artifacts.
+-   Build release artifacts only in CI from the tagged commit, not from a dirty working tree.
+-   Each release's notes state the supported Android versions (minSdk 26), the permissions, that
+    credits are in test mode until real billing exists, and the device-owner requirement for
+    the phone lock. Known limitations from `currentstate.md` go in the notes when relevant.
+-   If multiple binaries are ever required, document each artifact's purpose in the release
+    notes.
+
+### Before a public or production release
+
+-   Do not distribute a production build until signing, privacy policy and terms, store-policy
+    and device-enforcement assumptions, billing and consumer-credit rules (`plan.md` section 11)
+    have been reviewed. Until then every tag is `0.x` and the release notes say it is a test
+    build.
 
 ## 10. Documentation Rules
 

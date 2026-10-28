@@ -2,6 +2,15 @@
 
 Newest first.
 
+## 2026-10-28 — Release pipeline and signing
+
+- Added release management rules (instructions.md section 9, written by the user's request, modelled on the `teacher` repo): semantic versions in `gradle.properties` (`APP_VERSION_NAME`, `APP_VERSION_CODE`), tag `vX.Y.Z` must match, hyphenated tags are pre-releases, each meaningful increment bumps the version and is tagged after green CI, the signing key lives outside the repo and in four repository secrets.
+- Added `.github/workflows/ci.yml` (tests + debug build on every push) and `.github/workflows/release.yml` (tag-triggered: version check, tests, signing from secrets, signed APK + AAB with R8, signature verification, GitHub Release with `sipsure-rNN.apk`, AAB and mapping archived 90 days).
+- Release build now shrinks with R8, reads the version from `gradle.properties`, signs from `key.properties` (git-ignored) and is left unsigned when that file is absent.
+- Generated the release keystore (PKCS12, RSA 4096, 10000 days, alias `sipsure`) in `~/.sipsure-signing/`, outside the repository. It has not been backed up by anyone yet.
+- Verified locally: `assembleRelease` builds and `apksigner verify` passes (v2); the APK is about 0.96 MB, versionName 0.1.0 / code 1, and the debug-only receiver is absent.
+- NOT done: the four GitHub secrets (setting them was blocked from this session; the owner must run the commands below), a run of the release APK on a device (the emulator was closed and the only AVD has a device-owner debug build), and any tag or release.
+
 ## 2026-10-28 — Credit-only unlock, no free override, uninstall block, more water
 
 - Product change directed by the user (recorded in `plan.md` Amendment 2026-10-28): the free emergency override is removed everywhere (controller, UI, copy, notifications); once the phone is locked only a credit unlocks it (a photo check-in, review confirmation, pause and settings changes are all refused while locked); the camera is no longer allowlisted in lock-task mode, only the dialer.

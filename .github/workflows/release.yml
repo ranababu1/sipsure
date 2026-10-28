@@ -1,0 +1,114 @@
+name: Release
+
+# Builds and publishes a signed release when a version tag is pushed:
+#   git tag v0.2.0 && git push origin v0.2.0
+# Tags containing a hyphen (v0.2.0-rc1, v0.2.0-beta1) publish as pre-releases, so rehearsals
+# never take the "Latest" badge.
+#
+# The tag must match APP_VERSION_NAME in gradle.properties (v0.2.0 <-> 0.2.0); the build fails otherwise.
+# Attaches to the GitHub Release:
+#   sipsure-rNN.apk     rNN is APP_VERSION_CODE (0.2.0 with code 3 -> r3)
+# Also archives for 90 days: the signed .aab (Play Store) and the R8 mapping file (to read crash traces).
+#
+# Requires four repository secrets (Settings -> Secrets and variables -> Actions); the build
+# fails fast if any are missing:
+#   ANDROID_KEYSTORE_BASE64    base64 of the release keystore (.jks)
+#   ANDROID_KEYSTORE_PASSWORD  keystore store password
+#   ANDROID_KEY_ALIAS          key alias
+#   ANDROID_KEY_PASSWORD       key password
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to create the GitHub Release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: chmod +x gradlew
+
+      - name: Check the tag matches the app version
+        run: |
+          NAME="$(sed -nE 's/^APP_VERSION_NAME=(.*)$/\1/p' gradle.properties)"
+          CODE="$(sed -nE 's/^APP_VERSION_CODE=(.*)$/\1/p' gradle.properties)"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${TAG_VERSION%%-*}"
+          test -n "$NAME" && test -n "$CODE" || { echo 'APP_VERSION_NAME/CODE missing in gradle.properties' >&2; exit 1; }
+          [ "$TAG_VERSION" = "$NAME" ] || { echo "tag ${GITHUB_REF_NAME} does not match APP_VERSION_NAME=${NAME}" >&2; exit 1; }
+          echo "RELEASE_CODE=r${CODE}" >> "$GITHUB_ENV"
+
+      - name: Unit tests
+        run: ./gradlew --no-daemon :app:testDebugUnitTest
+
+      - name: Materialize release signing from GitHub Secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for v in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            [ -n "${!v}" ] || { echo "missing secret for $v" >&2; exit 1; }
+          done
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          {
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyPassword=$KEY_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "storeFile=$RUNNER_TEMP/release.jks"
+          } > key.properties
+
+      - name: Build signed release APK and app bundle
+        run: ./gradlew --no-daemon :app:assembleRelease :app:bundleRelease
+
+      - name: Verify the APK is signed
+        run: |
+          APKSIGNER="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort | tail -1)"
+          "$APKSIGNER" verify --verbose app/build/outputs/apk/release/app-release.apk
+
+      - name: Stage the APK under its public file name
+        run: |
+          mkdir -p release-assets
+          cp app/build/outputs/apk/release/app-release.apk "release-assets/sipsure-${RELEASE_CODE}.apk"
+          cat > release-assets/notes.md <<EOF
+          ### Install
+
+          Download \`sipsure-${RELEASE_CODE}.apk\` and open it on an Android 8.0+ phone (you may need to allow installs from this source).
+
+          The optional phone lock needs SipSure to be set up as device owner; see the README. Credits are in test mode and no real money is charged.
+          EOF
+
+      - name: Archive signed app bundle (Play Store)
+        uses: actions/upload-artifact@v4
+        with:
+          name: appbundle-${{ github.ref_name }}
+          path: app/build/outputs/bundle/release/app-release.aab
+          retention-days: 90
+
+      - name: Archive R8 mapping file
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapping-${{ github.ref_name }}
+          path: app/build/outputs/mapping/release/mapping.txt
+          retention-days: 90
+
+      - name: Create GitHub Release with the APK attached
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: release-assets/*.apk
+          body_path: release-assets/notes.md
+          append_body: true

@@ -17,3 +17,4 @@ google-services.json
 # OS
 .DS_Store
 Thumbs.db
+key.properties
