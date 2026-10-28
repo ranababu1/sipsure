@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -36,8 +37,11 @@ fun SettingsScreen(host: AppHost) {
     val changed = draft != state.schedule
     val valid = draft.validationError() == null
 
-    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        Text("Settings", style = MaterialTheme.typography.headlineLarge, color = Ocean.TextHigh)
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.padding(top = 8.dp)) {
+            Text("PREFERENCES", style = MaterialTheme.typography.labelMedium, color = Ocean.TextLow)
+            Text("Settings", style = MaterialTheme.typography.headlineLarge, color = Ocean.TextHigh)
+        }
 
         SectionLabel("Schedule")
         GlassCard(padding = 20.dp) {
@@ -55,10 +59,18 @@ fun SettingsScreen(host: AppHost) {
 
         SectionLabel("Privacy")
         GlassCard {
-            Text(
-                "Everything stays on this phone. Photos are checked on-device and deleted straight away; only a small fingerprint of recent photos is kept to spot repeats. No analytics, no tracking.",
-                style = MaterialTheme.typography.bodyMedium, color = Ocean.TextMid,
-            )
+            Row(verticalAlignment = Alignment.Top) {
+                GlyphBadge(Ocean.Mint) { CheckGlyph(it, 20.dp) }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Stays on this phone", style = MaterialTheme.typography.titleMedium, color = Ocean.TextHigh)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Photos are checked on-device and deleted straight away; only a small fingerprint of recent photos is kept to spot repeats. No analytics, no tracking.",
+                        style = MaterialTheme.typography.bodyMedium, color = Ocean.TextMid,
+                    )
+                }
+            }
         }
     }
 }
@@ -72,11 +84,9 @@ private fun PhoneLockCard(host: AppHost) {
 
     GlassCard(padding = 20.dp) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(46.dp).clip(CircleShape).background(Ocean.Coral.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
-                LockGlyph(Ocean.Coral, 24.dp)
-            }
+            GlyphBadge(Ocean.Coral, 44.dp) { LockGlyph(it, 22.dp) }
             Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-                Text("Lock my phone", style = MaterialTheme.typography.titleLarge, color = Ocean.TextHigh)
+                Text("Lock my phone", style = MaterialTheme.typography.titleMedium, color = Ocean.TextHigh)
                 Text(
                     when {
                         !available -> "Needs device setup"
@@ -90,7 +100,10 @@ private fun PhoneLockCard(host: AppHost) {
                 Switch(
                     checked = state.deviceLockEnabled,
                     onCheckedChange = { on -> if (on) confirmOn = true else host.act { setDeviceLock(false) } },
-                    colors = SwitchDefaults.colors(checkedTrackColor = Ocean.AquaBright, checkedThumbColor = Color.White),
+                    colors = SwitchDefaults.colors(
+                        checkedTrackColor = Ocean.Aqua, checkedThumbColor = Color(0xFF041A26),
+                        uncheckedTrackColor = Ocean.Glass, uncheckedBorderColor = Ocean.GlassBorder, uncheckedThumbColor = Ocean.TextLow,
+                    ),
                 )
             }
         }
@@ -103,8 +116,8 @@ private fun PhoneLockCard(host: AppHost) {
             Spacer(Modifier.height(10.dp))
             Text(
                 "adb shell dpm set-device-owner app.sipsure/.platform.SipSureAdminReceiver",
-                Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).background(Color.Black.copy(alpha = 0.3f)).padding(12.dp),
-                style = MaterialTheme.typography.bodyMedium, color = Ocean.Foam,
+                Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).background(Color.Black.copy(alpha = 0.35f)).padding(12.dp),
+                style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace), color = Ocean.Foam,
             )
         } else {
             Text(

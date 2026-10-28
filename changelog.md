@@ -2,6 +2,17 @@
 
 Newest first.
 
+## 0.2.0 (code 2) — 2026-10-28 — Sleeker UI
+
+- New visual system: near-black navy page with one soft light behind the hero that takes the state's colour (aqua on track, amber due, coral missed, mint covered); solid raised cards with hairline edges instead of translucent blobs; the old large background circles and bottom waves are gone.
+- Bundled Manrope (variable font, SIL OFL, licence in `assets/licenses/manrope-OFL.txt`, about 165 KB) for all text.
+- Today: date + greeting top bar with a tappable credit balance; the water glass is now an orb inside a progress ring that shows time left in the current period (glowing head, sweep gradient); stats strip (sips today, next check-in, interval); recent activity as a hairline list with tinted badges; headline cross-fades between states.
+- Bottom navigation is a slim frosted bar with labels and an active indicator, so it no longer covers content. Tabs fade/slide in.
+- Credits: wallet-style balance card, compact +3/+10 packs, segmented advance meter, hairline history. Settings: grouped header, restyled switch, monospace adb command.
+- Refined glyphs (thinner, consistent strokes; coin, back chevron, handset), aqua and amber gradient buttons with dark ink, animated chips, pulsing status dot.
+- Timestamps read "Today, 3:49 PM" / "Tomorrow" / "Yesterday" instead of numeric dates.
+- Verified on emulator: locked screen, bypass state, Today scroll, Credits, Settings. 60 unit tests pass. Not re-checked: onboarding screens, due/grace state visuals, TalkBack and large fonts, and the release (R8) build on a device.
+
 ## 2026-10-28 — Two APKs per release (match teacher)
 
 - Rehearsal `v0.1.0-rc1` published only `sipsure-r1.apk`; the `teacher` repo publishes two APKs, a download guide and device labels. I had missed that when copying its release setup.

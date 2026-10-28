@@ -1,5 +1,11 @@
 package app.sipsure.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -67,32 +73,34 @@ fun SipSureRoot(host: AppHost, onTick: () -> Unit) {
 
         val showNav = phase != Phase.SETUP_REQUIRED && phase != Phase.RECOVERY_REQUIRED && !host.deviceLockActive
 
-        OceanBackground {
-            Box(Modifier.fillMaxSize().statusBarsPadding()) {
-                when (phase) {
-                    Phase.SETUP_REQUIRED -> OnboardingScreen(host, Modifier.navigationBarsPadding())
-                    Phase.RECOVERY_REQUIRED -> Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp)) { Recovery(host) }
-                    else -> Column(
-                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 12.dp),
-                    ) {
-                        when (tab) {
-                            0 -> TodayScreen(host, now)
-                            1 -> CreditsScreen(host, now, onBack = { tab = 0 })
-                            else -> SettingsScreen(host)
+        OceanBackground(glow = if (tab == 0 || host.deviceLockActive) phaseGlow(phase) else Ocean.Aqua) {
+            Column(Modifier.fillMaxSize()) {
+                Box(Modifier.weight(1f).fillMaxWidth().statusBarsPadding()) {
+                    when (phase) {
+                        Phase.SETUP_REQUIRED -> OnboardingScreen(host, Modifier.navigationBarsPadding())
+                        Phase.RECOVERY_REQUIRED -> Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp)) { Recovery(host) }
+                        else -> AnimatedContent(
+                            tab,
+                            transitionSpec = { (fadeIn(tween(260)) + slideInVertically(tween(260)) { it / 24 }) togetherWith fadeOut(tween(160)) },
+                            label = "tab",
+                        ) { current ->
+                            Column(
+                                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp),
+                            ) {
+                                when (current) {
+                                    0 -> TodayScreen(host, now)
+                                    1 -> CreditsScreen(host, now, onBack = { tab = 0 })
+                                    else -> SettingsScreen(host)
+                                }
+                                Spacer(Modifier.height(28.dp).let { if (showNav) it else it.navigationBarsPadding() })
+                            }
                         }
-                        // Room so the last item can scroll above the floating nav.
-                        Spacer(Modifier.height(if (showNav) 120.dp else 32.dp))
+                    }
+                    Box(Modifier.fillMaxSize().padding(bottom = 12.dp), contentAlignment = Alignment.BottomCenter) {
+                        SnackbarHost(snackbar)
                     }
                 }
-            }
-
-            if (showNav) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                    FloatingNav(tabs, tab, { tab = it })
-                }
-            }
-            Box(Modifier.fillMaxSize().navigationBarsPadding().padding(bottom = if (showNav) 84.dp else 8.dp), contentAlignment = Alignment.BottomCenter) {
-                SnackbarHost(snackbar)
+                if (showNav) BottomBar(tabs, tab, { tab = it })
             }
         }
 
@@ -104,6 +112,7 @@ fun SipSureRoot(host: AppHost, onTick: () -> Unit) {
 private fun Recovery(host: AppHost) {
     Spacer(Modifier.height(32.dp))
     Text("Let's get you set up again", style = androidx.compose.material3.MaterialTheme.typography.headlineLarge, color = Ocean.TextHigh)
+    Spacer(Modifier.height(4.dp))
     Spacer(Modifier.height(16.dp))
     GlassCard {
         Text(

@@ -10,7 +10,19 @@ private val dateTimeFormat = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.S
 
 fun formatClock(ms: Long): String = clockFormat.format(Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()))
 
-fun formatDateTime(ms: Long): String = dateTimeFormat.format(Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()))
+/** "Today, 3:49 PM", "Tomorrow, 9:00 AM", "Yesterday, ..." or a short date and time for anything further away. */
+fun formatDateTime(ms: Long): String {
+    val zone = ZoneId.systemDefault()
+    val at = Instant.ofEpochMilli(ms).atZone(zone)
+    val today = java.time.LocalDate.now(zone)
+    val day = when (at.toLocalDate()) {
+        today -> "Today"
+        today.plusDays(1) -> "Tomorrow"
+        today.minusDays(1) -> "Yesterday"
+        else -> return dateTimeFormat.format(at)
+    }
+    return "$day, ${clockFormat.format(at)}"
+}
 
 /** Big number and unit for a countdown, e.g. ("28", "min") or ("1:12", "hours"). */
 fun countdownParts(remainingMs: Long): Pair<String, String> {

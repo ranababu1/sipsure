@@ -6,83 +6,123 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.sipsure.R
 
-/** The app is deliberately one immersive dark "ocean" look; every screen sits on the same gradient. */
+/**
+ * One calm, dark "midnight water" look: near-black navy surfaces, hairline borders, and colour used
+ * only where it means something (aqua = on track, amber = due, coral = missed, mint = covered).
+ */
 object Ocean {
-    val BgTop = Color(0xFF04121C)
-    val BgMid = Color(0xFF082B40)
-    val BgBottom = Color(0xFF0B5A75)
+    val BgTop = Color(0xFF060A11)
+    val BgMid = Color(0xFF08111C)
+    val BgBottom = Color(0xFF0A1826)
 
-    val Aqua = Color(0xFF4FD1F5)
-    val AquaBright = Color(0xFF2FB8E8)
-    val AquaDeep = Color(0xFF1479C4)
-    val Foam = Color(0xFFD5F6FF)
-    val Amber = Color(0xFFFFB347)
-    val Coral = Color(0xFFFF7B6B)
-    val Mint = Color(0xFF5BE3B0)
+    val Aqua = Color(0xFF5CDCFF)
+    val AquaBright = Color(0xFF46C2FF)
+    val AquaDeep = Color(0xFF3A7BFF)
+    val Foam = Color(0xFFDDF7FF)
+    val Amber = Color(0xFFFFB45C)
+    val Coral = Color(0xFFFF6F6F)
+    val Mint = Color(0xFF4FE0B4)
 
-    val TextHigh = Color(0xFFF2FAFD)
-    val TextMid = Color(0xFFB4CFDB)
-    val TextLow = Color(0xFF7FA0B0)
+    val TextHigh = Color(0xFFF3F7FB)
+    val TextMid = Color(0xFFA3B1C2)
+    val TextLow = Color(0xFF6B7A8C)
 
-    val Glass = Color.White.copy(alpha = 0.08f)
-    val GlassStrong = Color.White.copy(alpha = 0.14f)
-    val GlassBorder = Color.White.copy(alpha = 0.14f)
+    /** Solid raised surface (cards), slightly lighter than the page. */
+    val Surface = Color(0xFF0E1723)
+    val SurfaceHigh = Color(0xFF142030)
+    val Hairline = Color.White.copy(alpha = 0.07f)
+
+    val Glass = Color.White.copy(alpha = 0.05f)
+    val GlassStrong = Color.White.copy(alpha = 0.10f)
+    val GlassBorder = Color.White.copy(alpha = 0.09f)
 
     // Water colours per state, deep enough that white numerals stay readable on top.
-    val WaterCalm = Color(0xFF1E9FD8)
-    val WaterDue = Color(0xFFD9822B)
-    val WaterMissed = Color(0xFFCF5547)
-    val WaterBypass = Color(0xFF27AE86)
-    val WaterPaused = Color(0xFF6A8BA5)
+    val WaterCalm = Color(0xFF2A9FE6)
+    val WaterDue = Color(0xFFE08A34)
+    val WaterMissed = Color(0xFFD9534F)
+    val WaterBypass = Color(0xFF22B38A)
+    val WaterPaused = Color(0xFF5E7389)
+
+    val AquaGradient = Brush.linearGradient(listOf(Color(0xFF5CDCFF), Color(0xFF3A7BFF)))
+    val AmberGradient = Brush.linearGradient(listOf(Color(0xFFFFC46B), Color(0xFFFF8A4C)))
 }
+
+@OptIn(ExperimentalTextApi::class)
+private fun manrope(weight: Int) = Font(
+    R.font.manrope, FontWeight(weight),
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight)),
+)
+
+/** Manrope (variable, bundled, SIL OFL; licence in assets/licenses) for a crisp, modern feel. */
+val Manrope = FontFamily(manrope(300), manrope(400), manrope(500), manrope(600), manrope(700), manrope(800))
 
 private val Scheme = darkColorScheme(
     primary = Ocean.Aqua,
-    onPrimary = Color(0xFF00232F),
-    primaryContainer = Color(0xFF0E4A63),
+    onPrimary = Color(0xFF00222E),
+    primaryContainer = Color(0xFF0F3A52),
     onPrimaryContainer = Ocean.Foam,
-    secondary = Color(0xFF9CCBDD),
-    onSecondary = Color(0xFF0A2B3A),
-    secondaryContainer = Color(0xFF1B4559),
+    secondary = Color(0xFF9FB8CC),
+    onSecondary = Color(0xFF0A1D2B),
+    secondaryContainer = Color(0xFF1A2B3C),
     onSecondaryContainer = Ocean.Foam,
     tertiary = Ocean.Coral,
-    onTertiary = Color(0xFF4A0F06),
-    tertiaryContainer = Color(0xFF6E2A1E),
-    onTertiaryContainer = Color(0xFFFFDAD3),
+    onTertiary = Color(0xFF450A0A),
     background = Ocean.BgTop,
     onBackground = Ocean.TextHigh,
-    surface = Color(0xFF0E2D40),
+    surface = Ocean.Surface,
     onSurface = Ocean.TextHigh,
-    surfaceVariant = Color(0xFF173C52),
+    surfaceVariant = Ocean.SurfaceHigh,
     onSurfaceVariant = Ocean.TextMid,
+    surfaceContainer = Ocean.Surface,
+    surfaceContainerHigh = Ocean.SurfaceHigh,
+    surfaceContainerHighest = Color(0xFF1A2839),
+    inverseSurface = Color(0xFFE6EEF6),
+    inverseOnSurface = Color(0xFF0B1520),
     outline = Ocean.TextLow,
-    outlineVariant = Color(0xFF2B4B5E),
-    error = Color(0xFFFFB4AB),
+    outlineVariant = Color(0xFF223142),
+    error = Color(0xFFFF8A80),
+)
+
+private fun style(size: Int, line: Int, weight: Int, spacing: Float = 0f) = TextStyle(
+    fontFamily = Manrope, fontSize = size.sp, lineHeight = line.sp, fontWeight = FontWeight(weight), letterSpacing = spacing.sp,
 )
 
 private val AppTypography = Typography(
-    displayLarge = TextStyle(fontSize = 68.sp, lineHeight = 72.sp, fontWeight = FontWeight.Light, letterSpacing = (-2).sp),
-    displayMedium = TextStyle(fontSize = 44.sp, lineHeight = 48.sp, fontWeight = FontWeight.Light, letterSpacing = (-1).sp),
-    headlineLarge = TextStyle(fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
-    headlineMedium = TextStyle(fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp),
-    titleLarge = TextStyle(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold),
-    titleMedium = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontSize = 16.sp, lineHeight = 24.sp),
-    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
-    labelLarge = TextStyle(fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
-    labelMedium = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp),
+    displayLarge = style(76, 80, 300, -3f),
+    displayMedium = style(44, 48, 400, -1.5f),
+    displaySmall = style(34, 40, 500, -1f),
+    headlineLarge = style(30, 36, 700, -0.8f),
+    headlineMedium = style(24, 30, 700, -0.5f),
+    headlineSmall = style(20, 26, 700, -0.3f),
+    titleLarge = style(18, 24, 700, -0.2f),
+    titleMedium = style(15, 20, 600),
+    titleSmall = style(14, 18, 600),
+    bodyLarge = style(16, 24, 500),
+    bodyMedium = style(14, 20, 500),
+    bodySmall = style(12, 16, 500),
+    labelLarge = style(16, 20, 700),
+    labelMedium = style(11, 14, 700, 1.2f),
+    labelSmall = style(11, 14, 600, 0.3f),
 )
 
 private val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(10.dp),
     small = RoundedCornerShape(14.dp),
     medium = RoundedCornerShape(20.dp),
     large = RoundedCornerShape(28.dp),
+    extraLarge = RoundedCornerShape(32.dp),
 )
 
 @Composable
