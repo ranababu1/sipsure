@@ -7,7 +7,9 @@ name: Release
 #
 # The tag must match APP_VERSION_NAME in gradle.properties (v0.2.0 <-> 0.2.0); the build fails otherwise.
 # Attaches to the GitHub Release:
-#   sipsure-rNN.apk     rNN is APP_VERSION_CODE (0.2.0 with code 3 -> r3)
+#   sipsure-arm64-v8a-rNN.apk   most modern phones (2018+)
+#   sipsure-rNN.apk             universal APK (any device)
+#   rNN is APP_VERSION_CODE (0.2.0 with code 3 -> r3)
 # Also archives for 90 days: the signed .aab (Play Store) and the R8 mapping file (to read crash traces).
 #
 # Requires four repository secrets (Settings -> Secrets and variables -> Actions); the build
@@ -81,11 +83,17 @@ jobs:
       - name: Stage the APK under its public file name
         run: |
           mkdir -p release-assets
+          # Same two file names as the teacher repo. SipSure has no native libraries, so the arm64-v8a
+          # APK is currently byte-identical to the universal one; both are always published.
           cp app/build/outputs/apk/release/app-release.apk "release-assets/sipsure-${RELEASE_CODE}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "release-assets/sipsure-arm64-v8a-${RELEASE_CODE}.apk"
           cat > release-assets/notes.md <<EOF
-          ### Install
+          ### Which file should I download?
 
-          Download \`sipsure-${RELEASE_CODE}.apk\` and open it on an Android 8.0+ phone (you may need to allow installs from this source).
+          - \`sipsure-arm64-v8a-${RELEASE_CODE}.apk\` — most modern phones (2018+)
+          - \`sipsure-${RELEASE_CODE}.apk\` — universal APK (any device)
+
+          Open the file on an Android 8.0+ phone (you may need to allow installs from this source).
 
           The optional phone lock needs SipSure to be set up as device owner; see the README. Credits are in test mode and no real money is charged.
           EOF
@@ -112,3 +120,18 @@ jobs:
           files: release-assets/*.apk
           body_path: release-assets/notes.md
           append_body: true
+
+      - name: Label each APK asset with the devices it fits
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" \
+            --jq '.assets[] | [.id, .name] | @tsv' |
+          while IFS=$'\t' read -r id name; do
+            case "$name" in
+              *arm64-v8a*) label='most modern phones (2018+)' ;;
+              *)           label='universal APK (any device)' ;;
+            esac
+            echo "labeling $name: $label"
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/assets/${id}" -f label="$label"
+          done

@@ -249,7 +249,11 @@ publishes a GitHub Release from CI. Nothing is released by hand-uploading a loca
 -   Runs on every `v*` tag: checks the tag against the version, runs unit tests, writes the
     signing files from repository secrets, builds the signed release APK and app bundle with
     R8 shrinking, verifies the APK signature, and publishes the GitHub Release with
-    `sipsure-rNN.apk` (NN = `APP_VERSION_CODE`).
+    two APKs (NN = `APP_VERSION_CODE`): `sipsure-arm64-v8a-rNN.apk` (most modern phones) and
+    `sipsure-rNN.apk` (universal). Every release, stable or pre-release, must carry both, a
+    "Which file should I download?" section in the notes, and a device label on each asset, as in
+    the `teacher` repo. While the app has no native libraries the two files are identical; if
+    native code is added, the arm64-v8a file must become a real arm64-only build.
 -   Archives the signed `.aab` and the R8 `mapping.txt` for 90 days. Keep `mapping.txt` to read
     release crash traces.
 -   `.github/workflows/ci.yml` runs unit tests and a debug build on every push and pull request.
@@ -282,8 +286,7 @@ publishes a GitHub Release from CI. Nothing is released by hand-uploading a loca
 -   Each release's notes state the supported Android versions (minSdk 26), the permissions, that
     credits are in test mode until real billing exists, and the device-owner requirement for
     the phone lock. Known limitations from `currentstate.md` go in the notes when relevant.
--   If multiple binaries are ever required, document each artifact's purpose in the release
-    notes.
+-   Document each artifact's purpose in the release notes (the two-APK download guide).
 
 ### Before a public or production release
 

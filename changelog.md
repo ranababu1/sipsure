@@ -2,6 +2,13 @@
 
 Newest first.
 
+## 2026-10-28 — Two APKs per release (match teacher)
+
+- Rehearsal `v0.1.0-rc1` published only `sipsure-r1.apk`; the `teacher` repo publishes two APKs, a download guide and device labels. I had missed that when copying its release setup.
+- `release.yml` now publishes `sipsure-arm64-v8a-rNN.apk` and `sipsure-rNN.apk`, adds a "Which file should I download?" section to the notes and labels each asset. instructions.md section 9 makes this mandatory for every release.
+- Caveat: SipSure has no native libraries, so the two APKs are currently the same file under two names.
+- Not yet verified: the new workflow steps (first run will be the next tag).
+
 ## 2026-10-28 — Release pipeline and signing
 
 - Added release management rules (instructions.md section 9, written by the user's request, modelled on the `teacher` repo): semantic versions in `gradle.properties` (`APP_VERSION_NAME`, `APP_VERSION_CODE`), tag `vX.Y.Z` must match, hyphenated tags are pre-releases, each meaningful increment bumps the version and is tagged after green CI, the signing key lives outside the repo and in four repository secrets.
